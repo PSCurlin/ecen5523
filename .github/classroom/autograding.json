@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Autograde",
+      "setup": "sudo apt-get install gcc-multilib; sudo -H pip3 install pytest; sudo -H pip3 install ply; chmod u+x pyyc; sudo apt-get install libatlas3-base",
+      "run": "python3 --version; python3.10 --version; cd tests; pytest --pyyctests autograde",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 15,
+      "points": null
+    }
+  ]
+}
