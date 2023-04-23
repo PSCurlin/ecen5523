@@ -1,5 +1,5 @@
-CC=gcc
-CFLAGS=-m32 -O2
+CC=riscv64-linux-gnu-gcc
+CFLAGS= -O2
 
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
