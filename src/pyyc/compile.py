@@ -60,7 +60,7 @@ class REGISTER_ALLOCATION():
         self.temp_vars = {}
         self.temp_caller_saved_registers = ['%eax', '%ecx', '%edx']
         self.regs_proirity_order = ['%eax', '%ecx', '%edx', '%ebx', '%esi', '%edi']
-        self.compare_register_clash = ["%eax"]
+        self.compare_register_clash = ["%eax"] # function return 
         self.tmp_var_dict = {}
         self.next_temp_num = 0
         self.label_mappings = {
@@ -207,17 +207,27 @@ class REGISTER_ALLOCATION():
         # print("####################################")
         return liveness
 
+    def update_interference_graph(self, live_var, graph, dont_assign_set):
+        if live_var in graph:
+            graph[live_var]["dont_assign"].extend(dont_assign_set)
+        else:
+            graph[live_var] = {
+                "target_reg" : None,
+                "neighbors": [],
+                "dont_assign" : dont_assign_set
+            }  
+        return graph          
+
     def generate_interference_graph(self, ir_list, liveness_list):
         result = {}
         liveness_list.remove(liveness_list[0])
         for i in range(len(ir_list)):
             inst = ir_list[i]
             op = inst.split(' ')[0]
-            if ":" in op or op in ["je", "jmp", "function"]: #'je' in op or 'jmp' in op:
+            if ":" in op or op in ["j", "function"]: #'je' in op or 'jmp' in op:
                 continue
             live_vars = liveness_list[i]
-    
-            target_var = inst.split(' ')[-1]
+            target_var = inst.split(' ')[ 1]
             op = inst.split(' ')[0]
             if target_var not in result:
                 result[target_var] = {
@@ -230,188 +240,73 @@ class REGISTER_ALLOCATION():
             is_box, is_subscript, is_stack_assign = False, False, False
             is_get_ptr, is_free_vars, is_func_return, is_create_closure = False, False, False, False
             # handle function call too, add registers to the neighbors list
-            if op in ['print', 'eval_input', 'create_dict']:
+            if op in ['print', 'eval_input', 'create_dict', "get_fun_ptr", "get_free_vars"]:
                 for live_var in liveness_list[i]:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
+                    result = self.update_interference_graph(self, live_var, result, self.temp_caller_saved_registers)          
                 result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-
-            elif op in ["get_fun_ptr"]:
-                for live_var in live_vars:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
-                result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                is_get_ptr = True          
-            elif op in ["get_free_vars"]:
-                for live_var in live_vars:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
-                result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                is_free_vars = True
             elif op in ["create_closure"]:
                 for live_var in live_vars:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
+                    result = self.update_interference_graph(self, live_var, result, self.temp_caller_saved_registers)  
                 result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
                 is_create_closure = True
             elif op in ["function_return"]:
-                
                 for live_var in live_vars:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
+                    result = self.update_interference_graph(self, live_var, result, self.temp_caller_saved_registers)       
                 result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
                 keywords = inst.split(' ')
                 for i in range(1, len(keywords)-1):
                     result[keywords[i]]["neighbors"].append(target_var)
                     result[target_var]["neighbors"].append(keywords[i])
-
                     result[keywords[i]]["neighbors"].append(var)
                     result[var]["neighbors"].append(keywords[i])
-
             elif op in ["set_subscript"]:
                 for live_var in liveness_list[i]:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
+                    result = self.update_interference_graph(self, live_var, result, self.temp_caller_saved_registers)           
                 result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)
                 src1_op = inst.split(' ')[1].split(',')[0]
-                if '$' not in src1_op:
+                if not src1_op.isdigit():                    
                     if src1_op not in result:
-                        result[src1_op] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.compare_register_clash
-                        }
-                    elif src1_op in result:
-                        result[src1_op]["dont_assign"].extend(self.compare_register_clash)
-
+                        result = self.update_interference_graph(self, src1_op, result, self.compare_register_clash)
                 src3_op = inst.split(' ')[3].split(',')[0]
-                if '$' not in src3_op:
+                if not src3_op.isdigit():
                     if src3_op not in result:
-                        result[src3_op] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.compare_register_clash
-                        }
-                    elif src3_op in result:
-                        result[src3_op]["dont_assign"].extend(self.compare_register_clash)
-                
-                if '$' not in src1_op or '$' not in src3_op: 
+                        result = self.update_interference_graph(self, src3_op, result, self.compare_register_clash)
+                if not src1_op.isdigit() or not src3_op.isdigit(): 
                     is_subscript = True
+            # todo: discuss
             elif op in ["equals", "not_equals", "equals_big", "not_equals_big", "get_subscript", "add", "assign_stack"]:
                 is_compare = True
                 for live_var in liveness_list[i]:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.compare_register_clash)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.compare_register_clash
-                        }             
-                
+                    result = self.update_interference_graph(self, live_var, result, self.compare_register_clash)       
+                src_op = inst.split(' ')[1].split(',')[0]
                 middle_op = inst.split(' ')[2]
-                if '$' not in middle_op:
-                    if middle_op not in result:
-                        result[middle_op] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.compare_register_clash
-                        }
-                    else:
-                        result[middle_op]["dont_assign"].extend(self.compare_register_clash)
+                if not middle_op.isdigit():
+                    result = self.update_interference_graph(self, middle_op, result, self.compare_register_clash)
+                
+                if not src_op.isdigit():
+                    result = self.update_interference_graph(self, src_op, result, self.compare_register_clash) 
                 result[target_var]["dont_assign"].extend(self.compare_register_clash)
 
-                src_op = inst.split(' ')[1].split(',')[0]
-                if src_op not in result and '$' not in src_op:
-                    result[src_op] = {
-                        "target_reg" : None,
-                        "neighbors": [],
-                        "dont_assign" : self.compare_register_clash
-                    }
-                elif src_op in result:
-                    result[src_op]["dont_assign"].extend(self.compare_register_clash)
-            
-            elif op in ['project_int', 'is_int', 'inject_int', 'project_bool', 'is_bool',  'inject_bool', 'project_big', 
-                        'is_big', 'inject_big', 'is_true', 'create_list']:
+            elif op in ['project_int', 'is_int', 'inject_int', 'project_bool', 'is_bool',  'inject_bool', 'project_big', 'is_big', 'inject_big', 'is_true', 'create_list']:
                 for live_var in liveness_list[i]:
-                    if live_var in result:
-                        result[live_var]["dont_assign"].extend(self.temp_caller_saved_registers)
-                    else:
-                        result[live_var] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }            
+                    result = self.update_interference_graph(self, live_var, result, self.temp_caller_saved_registers)             
                 result[target_var]["dont_assign"].extend(self.temp_caller_saved_registers)     
                 src_op = inst.split(' ')[1].split(',')[0]
                 
-                if '$' not in src_op:
-                    if src_op not in result:
-                        result[src_op] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : self.temp_caller_saved_registers
-                        }
-                    else:
-                        result[src_op]["dont_assign"].extend(self.temp_caller_saved_registers)
+                if not src_op.isdigit():
+                    result = self.update_interference_graph(self, src_op, result, self.temp_caller_saved_registers)
                     is_box = True
-
 
             elif op == 'addl':
                 src_op = inst.split(' ')[1].split(',')[0]
-                if src_op not in result and '$' not in src_op:
-                    result[src_op] = {
-                        "target_reg" : None,
-                        "neighbors": [],
-                        "dont_assign" : []
-                    }
+                if not src_op.isdigit():
+                    result = self.update_interference_graph(self, src_op, result, [])
                     is_addl_op = True
            
             elif op == 'movl':
                 src_op = inst.split(' ')[1].split(',')[0]
-                if '$' not in src_op:
-                    if src_op not in result: 
-                        result[src_op] = {
-                            "target_reg" : None,
-                            "neighbors": [],
-                            "dont_assign" : []
-                        }
+                if not src_op.isdigit():
+                    result = self.update_interference_graph(self, src_op, result, [])
                     is_movl_op = True   
             
             for var in live_vars:
@@ -440,7 +335,6 @@ class REGISTER_ALLOCATION():
                         result[keywords[2]]["neighbors"].append(var)
                         result[var]["neighbors"].append(keywords[2])
                                 
-
                 if is_movl_op:
                     if src_op in result[target_var]["neighbors"]:
                         result[target_var]["neighbors"].remove(src_op)
@@ -562,25 +456,31 @@ class REGISTER_ALLOCATION():
                 ir_list[i] = 'pushl ' + value + '\n' + 'call print_any' + '\n' + 'addl $4, %esp'
             elif op in ['eval_input']:
                 value = keywords[-1]
-                ir_list[i] = 'call {op}\nmovl %eax, {value}'.format(value = value, op= "eval_input_pyobj")
+                ir_list[i] = 'call {op}\nmovl a1, {value}'.format(value = value, op= "eval_input_pyobj")
             elif op in ['create_dict']:
                 value = keywords[-1]
-                ir_list[i] = 'call {op}\nmovl %eax, {value}'.format(value = value, op=op)
+                ir_list[i] = 'call {op}\nmovl a1, {value}'.format(value = value, op=op)
             elif op in ["assign_stack"]:
-                value =  keywords[1].replace('$', '') + "(%ebp)"
-                ir_list[i] = 'movl {value}, {var}'.format(value = value, var = keywords[-1])
-            elif 'not_equals_big' in ir_list[i]: 
-                ir_list[i] = "pushl {y}\npushl {x}\ncall not_equal\nmovl %eax, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                value =  keywords[2].replace('$', '') + "(%ebp)"
+                ir_list[i] = 'movl {value}, {var}'.format(value = value, var = keywords[1])
+            elif 'not_equals_big' in ir_list[i]:  
+                ir_list[i] = "pushl {y}\npushl {x}\ncall not_equal\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
             elif 'equals_big' in ir_list[i]:
-                ir_list[i] = "pushl {y}\npushl {x}\ncall equal\nmovl %eax, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                ir_list[i] = "pushl {y}\npushl {x}\ncall equal\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
             elif 'not_equals' in ir_list[i]: 
-                ir_list[i] = "cmpl {x}, {y}\nsetne %al\nmovzbl %al, {z}".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                if keywords[2].isdigit():
+                    ir_list[i] = "xori {tgt}, {src1}, {src2}\nsnez{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                else:
+                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nsnez{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif 'equals' in ir_list[i]:
-                ir_list[i] = "cmpl {x}, {y}\nsete %al\nmovzbl %al, {z}".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                if keywords[2].isdigit():
+                    ir_list[i] = "xori {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                else:
+                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif op in ["get_subscript", "add", "create_closure"]:
-                ir_list[i] = "pushl {y}\npushl {x}\ncall {op}\nmovl %eax, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3], op=op)
+                ir_list[i] = "pushl {y}\npushl {x}\ncall {op}\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3], op=op)
             elif op in ["get_fun_ptr", "get_free_vars"]:
-                ir_list[i] = "pushl {x}\ncall {op}\nmovl %eax, {tgt}\naddl $4, %esp".format(x=keywords[1], tgt=keywords[2], op=op)
+                ir_list[i] = "pushl {x}\ncall {op}\nmovl a1, {tgt}\naddl $4, %esp".format(x=keywords[1], tgt=keywords[2], op=op)
             elif op in ["function_return"]:
                 push_str = ""
                 stack_length = 0
@@ -589,18 +489,18 @@ class REGISTER_ALLOCATION():
                     push_str += "pushl {var}\n".format(var=keywords[j])
                     j -= 1
                     stack_length += 4
-                ir_list[i] = push_str + "call *{op}\nmovl %eax, {z}\naddl ${stack_length}, %esp".format(z=keywords[-1], op=keywords[1], stack_length = str(stack_length))                    
+                ir_list[i] = push_str + "call *{op}\nmovl a1, {z}\naddl ${stack_length}, %esp".format(z=keywords[-1], op=keywords[1], stack_length = str(stack_length))                    
             elif op in ['is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', "is_big", "project_big", "inject_big", 
                         "is_true", 'create_list']: 
                 src_reg = keywords[1].split(",")[0]
                 target_reg = keywords[-1]
-                ir_list[i] = 'pushl {src_reg}\ncall {op}\nmovl %eax, {target_reg}\naddl $4, %esp'.format(op=op,target_reg=target_reg,src_reg=src_reg)
+                ir_list[i] = 'pushl {src_reg}\ncall {op}\nmovl a1, {target_reg}\naddl $4, %esp'.format(op=op,target_reg=target_reg,src_reg=src_reg)
             elif op in ['set_subscript']:
                 reg = keywords[4]
                 value = keywords[3].split(',')[0]
                 index = keywords[2].split(',')[0]
                 list_name = keywords[1].split(',')[0]
-                ir_list[i] = "pushl {value}\npushl {index}\npushl {list}\ncall {op}\nmovl %eax, {reg}\naddl $12, %esp".format(list = list_name, reg = reg, value= value, index=index, op=op )
+                ir_list[i] = "pushl {value}\npushl {index}\npushl {list}\ncall {op}\nmovl a1, {reg}\naddl $12, %esp".format(list = list_name, reg = reg, value= value, index=index, op=op )
             elif op in ['function']:
                 ir_list[i] = None
 
@@ -725,131 +625,46 @@ class REGISTER_ALLOCATION():
         while(None in l):
             l.remove(None)
 
-    
+    def update_reg_var(self, reg_var_mapping, index, target_reg, var, ir_str, i):
+        if not var.isdigit():
+            reg_var_mapping[i].append({
+                "index": index,
+                "reg" : target_reg,
+                "var" : var
+            })
+            keywords = ir_str.split(' ')              
+            keywords[index] = keywords[index].replace(var, target_reg)
+            ir_str = " ".join(keywords)
+        return reg_var_mapping, ir_str
 
     def generate_reg_var_mapping(self, interference_graph, ir_list):
         reg_var_mapping = {}
         for i in range(len(ir_list)):
             keywords = ir_list[i].split(' ')
-            if keywords[0] in ["je", "jmp", "function"] or len(keywords) <= 1:
+            if keywords[0] in ["j", "function"] or len(keywords) <= 1:
                 continue
             reg_var_mapping[i] = []
-
-            if keywords[0] in ['addl', 'movl', 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 
-                               'inject_bool', 'is_big', 'project_big', 'inject_big', 'is_true', 'create_list', 'assign_stack']:
-                
-                reg_var_mapping[i].append({
-                    "index": 2,
-                    "reg" : interference_graph[keywords[-1]]["target_reg"],
-                    "var" : keywords[2]
-                })  
-                keywords = ir_list[i].split(' ')              
-                keywords[2] = keywords[2].replace(keywords[2].split(',')[0], interference_graph[keywords[2].split(',')[0]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-            
-            elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big", "get_subscript", "add"]:
-                if '$' not in keywords[2]:
-                    reg_var_mapping[i].append({
-                        "index": 2,
-                        "reg" : interference_graph[keywords[2]]["target_reg"],
-                        "var" : keywords[2]
-                    })
-
-                    keywords = ir_list[i].split(' ')
-                    keywords[2] = keywords[2].replace(keywords[2].split(',')[0], interference_graph[keywords[2].split(',')[0]]["target_reg"])
-                    ir_list[i] = " ".join(keywords)
-
-                reg_var_mapping[i].append({
-                    "index": 3,
-                    "reg" : interference_graph[keywords[3]]["target_reg"],
-                    "var" : keywords[3]
-                })
-
-                keywords = ir_list[i].split(' ')
-                keywords[3] = keywords[3].replace(keywords[3].split(',')[0], interference_graph[keywords[3].split(',')[0]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-            
+            if keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big', 'is_true', 'create_list', 'assign_stack']:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
+           
+            elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big", "get_subscript", "add", "xori", "add", "list_add", "create_closure"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, interference_graph[keywords[3]]["target_reg"], keywords[3], ir_list[i], i)
             elif keywords[0] in ["set_subscript"]:
-                if '$' not in keywords[3].split(',')[0]:
-                    reg_var_mapping[i].append({
-                        "index": 3,
-                        "reg" : interference_graph[keywords[3].split(',')[0]]["target_reg"],
-                        "var" : keywords[3].split(',')[0]
-                    })
-                    keywords = ir_list[i].split(' ')
-                    keywords[3] = keywords[3].replace(keywords[3].split(',')[0], interference_graph[keywords[3].split(',')[0]]["target_reg"])
-                    ir_list[i] = " ".join(keywords)
-
-                if '$' not in keywords[2].split(',')[0]:
-                    reg_var_mapping[i].append({
-                        "index": 2,
-                        "reg" : interference_graph[keywords[2].split(',')[0]]["target_reg"],
-                        "var" : keywords[2].split(',')[0]
-                    })
-                    keywords = ir_list[i].split(' ')
-                    keywords[2] = keywords[2].replace(keywords[2].split(',')[0], interference_graph[keywords[2].split(',')[0]]["target_reg"])
-                    ir_list[i] = " ".join(keywords)
-
-                reg_var_mapping[i].append({
-                    "index": 4,
-                    "reg" : interference_graph[keywords[4]]["target_reg"],
-                    "var" : keywords[4]
-                })
-                keywords = ir_list[i].split(' ')
-                keywords[4] = keywords[4].replace(keywords[4].split(',')[0], interference_graph[keywords[4].split(',')[0]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-
-            elif keywords[0] in ["get_free_vars", "get_fun_ptr"]:
-                reg_var_mapping[i].append({
-                    "index": 2,
-                    "reg" : interference_graph[keywords[2]]["target_reg"],
-                    "var" : keywords[2]
-                })
-                keywords = ir_list[i].split(' ')
-                keywords[2] = keywords[2].replace(keywords[2], interference_graph[keywords[2]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-            
-            elif keywords[0] in ["create_closure"]:
-                reg_var_mapping[i].append({
-                    "index": 2,
-                    "reg" : interference_graph[keywords[2]]["target_reg"],
-                    "var" : keywords[2]
-                })
-                keywords = ir_list[i].split(' ')
-                keywords[2] = keywords[2].replace(keywords[2], interference_graph[keywords[2]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-
-                reg_var_mapping[i].append({
-                    "index": 3,
-                    "reg" : interference_graph[keywords[3]]["target_reg"],
-                    "var" : keywords[3]
-                })
-                keywords = ir_list[i].split(' ')
-                keywords[3] = keywords[3].replace(keywords[3], interference_graph[keywords[3]]["target_reg"])
-                ir_list[i] = " ".join(keywords)
-
-            elif keywords[0] in ["function_return"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, interference_graph[keywords[3]]["target_reg"], keywords[3], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 4, interference_graph[keywords[4]]["target_reg"], keywords[4], ir_list[i], i)
+            elif keywords[0] in ["get_free_vars", "get_fun_ptr", "beq"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
+            elif keywords[0] in ["function_return", "bez"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
                 for j in range(2, len(keywords)):
-                    reg_var_mapping[i].append({
-                        "index": j,
-                        "reg" : interference_graph[keywords[j]]["target_reg"],
-                        "var" : keywords[j]
-                    })
-                    keywords = ir_list[i].split(' ')
-                    keywords[j] = keywords[j].replace(keywords[j], interference_graph[keywords[j]]["target_reg"])
-                    ir_list[i] = " ".join(keywords)
-
-            if '$' not in keywords[1]:
-                keywords = ir_list[i].split(' ')
-                if "%" not in keywords[1]:
-                    reg_var_mapping[i].append({
-                        "index": 1,
-                        "reg" : interference_graph[keywords[1].split(',')[0]]["target_reg"],
-                        "var" : keywords[1].split(',')[0]
-                    }) 
-                    keywords[1] = keywords[1].replace(keywords[1].split(',')[0], interference_graph[keywords[1].split(',')[0]]["target_reg"])
-                    ir_list[i] = " ".join(keywords)       
-
+                    reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, j, interference_graph[keywords[j]]["target_reg"], keywords[j], ir_list[i], i)
+                   
         return reg_var_mapping
   
     def replace_reg_with_vars(self, reg_var_mapping, stack_mapping, ir_list):
@@ -878,31 +693,36 @@ class REGISTER_ALLOCATION():
             
     def assign_registers(self, flat_tree, stack_var_mapping):
         ir_lists = get_ir_assembly(flat_tree, stack_var_mapping)
+        
         stack_per_fun = {}
         for fun in ir_lists:
             is_spill_code_present = True
             ir_list = ir_lists[fun]
             save_file(ir_list, "demo.s")
+            import ipdb; ipdb.set_trace()
             reg_var_mapping = {}
             stack_mapping = {}
             while(is_spill_code_present):
                 stack_mapping = {}
                 liveness_list = self.generate_liveness_using_blocks(ir_list)  
                 save_file(ir_list, "demo1.s")
-                interference_graph = self.generate_interference_graph(ir_list, liveness_list)
                 
-                if 'function' in ir_list[0]:
-                    stack_prev = len(ir_list[0].split(' '))
-                else:
-                    stack_prev = 0
+                og_irx86_list = self.irx86_list
+                graph = GRAPH()
+                reg_var_mapping, self.irx86_list, stack_mapping  = graph.get_reg_var_mapping(self.irx86_list, liveness_list)
+                
+                # interference_graph = self.generate_interference_graph(ir_list, liveness_list)
+                # if 'function' in ir_list[0]:
+                #     stack_prev = len(ir_list[0].split(' '))
+                # else:
+                #     stack_prev = 0
+                # interference_graph, stack_mapping = self.coloring_graph(interference_graph, stack_prev)
+                # og_irx86_list = ir_list
+                # vars = list(interference_graph.keys())
+                # vars.sort()
+                # reg_var_mapping = self.generate_reg_var_mapping(interference_graph, ir_list)
 
-                interference_graph, stack_mapping = self.coloring_graph(interference_graph, stack_prev)
-                og_irx86_list = ir_list
-                
-                vars = list(interference_graph.keys())
-                vars.sort()
-                
-                reg_var_mapping = self.generate_reg_var_mapping(interference_graph, ir_list)
+
                 replacements, is_spill_code_present = self.check_for_spill_code(reg_var_mapping, ir_list)
 
                 for index in replacements:
