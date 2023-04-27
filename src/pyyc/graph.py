@@ -17,6 +17,9 @@ class GRAPH_NODE():
         self.target_reg = reg
 
 
+def get_var(var):
+    return var.split(',')[0]
+
 class GRAPH():
     def __init__(self):
         self.temp_caller_saved_registers = {'%eax', '%ecx', '%edx'}
@@ -29,52 +32,55 @@ class GRAPH():
             self.graph[key] = GRAPH_NODE()
         return self.graph[key]
 
+    def add_neighbors(self, var1, var2):
+        if var1 != var2:
+            var1_node = self.get_node(var1)
+            var2_node = self.get_node(var2)
+            var1_node.neighbors.add(var2)
+            var2_node.neighbors.add(var1)
+
+
     def gen_graph(self, ir_assembly, liveness_list):
         liveness_list.remove(liveness_list[0])
         for i in range(len(ir_assembly)):
             inst = ir_assembly[i]
             op = inst.split(' ')[0]
-            if ":" in op or op in ["je", "jmp"]: 
+            if ":" in op or op in ["j"]: 
                 continue
             live_vars = liveness_list[i]
             keywords = inst.split(' ')
-            
-            target_var = keywords[-1]
-            if op == "movl": 
-                # target interfers with everything in live_vars except src_op
-                target_node = self.get_node(target_var)
-                src_op = keywords[1].split(',')[0]
+
+            for i in range(len(keywords)):
+                keywords[i] = get_var(keywords[i])
+
+            target_var = get_var(keywords[1])
+            if op == "li":
                 for live_var in live_vars:
                     if live_var == target_var or live_var == src_op:
                         continue
-                    live_var_node = self.get_node(live_var)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
+                    self.add_neighbors(live_var, target_var)
                     
-
-            elif op == "addl":
-                # target intergeres with everything in live_vars
-                target_node = self.get_node(target_var)
-                src_op = keywords[1]
-                
+            elif op in ["add", "addi"]:
+                src1_op = get_var(keywords[2])
+                src2_op = get_var(keywords[3]) 
                 for live_var in live_vars:
-                    if live_var == target_var:
+                    if live_var == target_var or live_var == src_op:
                         continue
-                    live_var_node = self.get_node(live_var)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
-            
-            elif op == "negl":
-                target_node = self.get_node(target_var)
-                
+                    self.add_neighbors(live_var, target_var)
+                    if not src2_op.isdigit():
+                        self.add_neighbors(src2_op, target_var)
+                        self.add_neighbors(live_var, src2_op)
+                    if not src1_op.isdigit() and src1_op != 'x0':
+                        self.add_neighbors(src1_op, target_var)
+                        self.add_neighbors(live_var, src1_op)
+                    if (not src1_op.isdigit() and src1_op != 'x0') and (not src2_op.isdigit()):
+                        self.add_neighbors(src1_op, src2_op)
+            elif op == "neg":
                 for live_var in live_vars:
-                    if live_var == target_var:
+                    if live_var == target_var or live_var == src_op:
                         continue
-                    live_var_node = self.get_node(live_var)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
-
-            elif op in ['print', 'eval_input']:
+                    self.add_neighbors(live_var, target_var)
+            elif op in ['print', 'eval_input', 'create_dict', "get_fun_ptr", "get_free_vars"]:
                 # caller saved registers will interfer with everything in live_vars
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
@@ -83,50 +89,135 @@ class GRAPH():
                         continue
                     live_var_node = self.get_node(live_var)
                     live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
-                    target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
-                    live_var_node = self.get_node(live_var)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
-            elif op in ['inject_int', 'project_int', 'inject_bool', 'project_bool' , 'inject_big', 'project_big'  'is_int', 'is_big', 'is_bool', 'is_true']:  
-                # caller saved registers will interfer with everything in live_vars               
+                    self.add_neighbors(live_var, target_var)
+            elif op in ["function_return"]:
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
-                src_op =  keywords[1].split(',')[0]
                 for live_var in live_vars:
                     if live_var == target_var:
                         continue
                     live_var_node = self.get_node(live_var)
                     live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
-                    target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
+                    self.add_neighbors(live_var, target_var)
+                
+                    for i in range(2, len(keywords)):
+                        var = get_var(keywords[i])
+                        self.add_neighbors(live_var, var)
+                        self.add_neighbors(var, target_var)
+                
+            elif op in ["set_subscript"]:
+                target_node = self.get_node(target_var)
+                target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
+                list_var = get_var(keywords[2])
+                value_var = get_var(keywords[4])
+
+                self.add_neighbors(list_var, target_var)
+                self.add_neighbors(value_var, target_var)
+                self.add_neighbors(value_var, list_var)
+                for live_var in live_vars:
+                    if live_var == target_var:
+                        continue
+                    self.add_neighbors(live_var, target_var)
+                    live_var_node = self.get_node(live_var)
+                    live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
+                    self.add_neighbors(live_var, list_var)
+                    self.add_neighbors(live_var, value_var)
+            
+            elif op in ["create_closure"]:
+                target_node = self.get_node(target_var)
+                target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
+                
+                tgt_var = get_var(keywords[2])
+                free_var = get_var(keywords[3])
+                self.add_neighbors(tgt_var, free_var)
+                self.add_neighbors(tgt_var, target_var)
+                self.add_neighbors(target_var, free_var)
+                for live_var in live_vars:
+                    if live_var == target_var:
+                        continue
+                    self.add_neighbors(live_var, target_var)
+                    live_var_node = self.get_node(live_var)
+                    live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
+
+                    self.add_neighbors(tgt_var, target_var)
+                    self.add_neighbors(live_var, tgt_var)
+
+                    self.add_neighbors(free_var, target_var)
+                    self.add_neighbors(live_var, free_var)
+
+            elif op in ["bez"]:
+                target_node = self.get_node(target_var)
+                for live_var in live_vars:
+                    if live_var == target_var:
+                        continue
+                    self.add_neighbors(live_var, target_var)
+
+            elif op in ["beq"]:
+                target_node = self.get_node(target_var)
+                src_op1 = get_var(keywords[1])
+                src_op2 = get_var(keywords[2])
+                for live_var in live_vars:
+                    if live_var != src_op1 and not src_op1.isdigit():
+                        self.add_neighbors(live_var, src_op1)
+                        self.add_neighbors(src_op1, target_var)
+                    if live_var != src_op2 and not src_op2.isdigit():
+                        self.add_neighbors(live_var, src_op2)
+                        self.add_neighbors(src_op2, target_var)
+            
+            elif op in ["xori"]:
+                target_node = self.get_node(target_var)
+                src_op1 = get_var(keywords[2])
+                src_op2 = get_var(keywords[3])
+                for live_var in live_vars:
+                    if live_var == target_var:
+                        continue
+                    self.add_neighbors(live_var, target_var)
+                    if not src_op1.isdigit():
+                        self.add_neighbors(live_var, src_op1)
+                        self.add_neighbors(src_op1, target_var)
+                    if not src_op2.isdigit():
+                        self.add_neighbors(live_var, src_op2)
+                        self.add_neighbors(src_op2, target_var)
+
+            elif op in ['project_int', 'is_int', 'inject_int', 'project_bool', 'is_bool',  'inject_bool', 'project_big', 'is_big', 'inject_big', 'is_true', 'create_list']:  
+                # caller saved registers will interfer with everything in live_vars               
+                target_node = self.get_node(target_var)
+                target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
+                src_op =  get_var(keywords[1])
+                for live_var in live_vars:
+                    if live_var == target_var:
+                        continue
+                    live_var_node = self.get_node(live_var)
+                    live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
+                    self.add_neighbors(live_var, target_var)
+
+                    if not src_op.isdigit():
+                        self.add_neighbors(live_var, src_op)
+                        self.add_neighbors(target_var, src_op)
+
                     
-            elif op in ['equals', 'not_equals', "equals_big", "not_equals_big"]:
+            elif op in ["equals", "not_equals", "equals_big", "not_equals_big", "get_subscript", "add", "assign_stack"]:
                 # compare saved registers will interfere with live_vars
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.compare_register_clash)
-                src_op1 = keywords[1]
-                src_op2 = keywords[2]
+                src_op1 = get_var(keywords[1])
+                src_op2 = get_var(keywords[2])
                 for live_var in live_vars:
-                    if live_var == target_var: #or live_var == src_op1 or live_var == src_op2:
+                    if live_var == target_var: 
                         continue
+                    self.add_neighbors(target_var, live_var)
                     live_var_node = self.get_node(live_var)
-                    live_var_node.neighbors.add(target_var)
-                    target_node.neighbors.add(live_var)
                     live_var_node.dont_assign = live_var_node.dont_assign.union(self.compare_register_clash)
-                    target_node.dont_assign = target_node.dont_assign.union(self.compare_register_clash)
-                    if '$' not in src_op1:
+                    if not src_op1.isdigit():
                         src_op1_node = self.get_node(src_op1)
-                        src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)
-
-                        target_node.neighbors.add(src_op1)
-                        src_op1_node.neighbors.add(target_var)
-                    if '$' not in src_op2:
+                        src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)                        
+                        self.add_neighbors(target_var, src_op1)
+                        self.add_neighbors(src_op1, live_var)
+                    if not src_op2.isdigit():
                         src_op2_node = self.get_node(src_op2)
-                        src_op2_node.dont_assign = src_op2_node.dont_assign.union(self.compare_register_clash)
-
-                        target_node.neighbors.add(src_op2)
-                        src_op2_node.neighbors.add(target_var)
+                        src_op2_node.dont_assign = src_op2_node.dont_assign.union(self.compare_register_clash)                        
+                        self.add_neighbors(target_var, src_op2)
+                        self.add_neighbors(src_op2, live_var)
 
     def assign_reg(self, var, stack_mapping):
         no_no_regs = self.graph[var].dont_assign
@@ -182,52 +273,55 @@ class GRAPH():
             ignore_vars_len = len(ignore_vars)
         return stack_mapping
 
-    def generate_reg_var_mapping(self, ir_assembly):
+    def update_reg_var(self, reg_var_mapping, index, var, ir_str, i):
+        if not var.isdigit() and '-' not in var: 
+            target_reg = self.graph[get_var(var)].target_reg
+            reg_var_mapping[i].append({
+                "index": index,
+                "reg" : target_reg,
+                "var" : var
+            })
+            keywords = ir_str.split(' ')              
+            keywords[index] = keywords[index].replace(var, target_reg)
+            ir_str = " ".join(keywords)
+        return reg_var_mapping, ir_str
+
+    def generate_reg_var_mapping(self, ir_list):
         reg_var_mapping = {}
-        for i in range(len(ir_assembly)):
-            keywords = ir_assembly[i].split(' ')
-            if keywords[0] in ["je", "jmp"] or len(keywords) <= 1:
+        for i in range(len(ir_list)):
+            keywords = ir_list[i].split(' ')
+            if keywords[0] in ["j", "function"] or len(keywords) <= 1:
                 continue
             reg_var_mapping[i] = []
+            if keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big', 'is_true', 'create_list', 'assign_stack']:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i)           
+            elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big", "get_subscript", "add", "xori", "add", "list_add", "create_closure"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i) 
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, get_var(keywords[1]), ir_list[i], i)
+            elif keywords[0] in ["set_subscript"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i) 
+                # reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, self.graph[get_var(keywords[3])].target_reg, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 4, get_var(keywords[2]), ir_list[i], i) 
+            elif keywords[0] in ["get_free_vars", "get_fun_ptr", "beq"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i) 
+            elif keywords[0] in ["function_return", "bez"]:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+                for j in range(2, len(keywords)):
+                    reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, j, get_var(keywords[1]), ir_list[i], i)
+        return reg_var_mapping, ir_list
 
-            if keywords[0] in ['addl', 'movl', 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 
-                               "is_big", "project_big", "inject_big", "is_true"] and '$' not in keywords[-1]:
-                
-                reg_var_mapping[i].append({
-                    "reg" : self.graph[keywords[-1]].target_reg,
-                    "var" : keywords[-1]
-                })
 
-                ir_assembly[i] = ir_assembly[i].replace(keywords[-1], self.graph[keywords[-1]].target_reg)
-            elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big"]:
-                if '$' not in keywords[2]:
-                    reg_var_mapping[i].append({
-                        "reg" : self.graph[keywords[2]].target_reg,
-                        "var" : keywords[2]
-                    })
-                    ir_assembly[i] = ir_assembly[i].replace(keywords[2], self.graph[keywords[2]].target_reg)
-
-                reg_var_mapping[i].append({
-                    "reg" : self.graph[keywords[3]].target_reg,
-                    "var" : keywords[3]
-                })
-                ir_assembly[i] = ir_assembly[i].replace(keywords[3], self.graph[keywords[3]].target_reg)
-
-            if '$' not in keywords[1]:
-                reg_var_mapping[i].append({
-                    "reg" : self.graph[keywords[1].split(',')[0]].target_reg,
-                    "var" : keywords[1].split(',')[0]
-                })    
-                ir_assembly[i] = ir_assembly[i].replace(keywords[1].split(',')[0], self.graph[keywords[1].split(',')[0]].target_reg)
-                
-
-        return reg_var_mapping, ir_assembly
 
     def get_reg_var_mapping(self, ir_assembly, liveness_list):
         self.gen_graph(ir_assembly, liveness_list)
         stack_mapping = self.coloring_graph()
         vars = list(self.graph.keys())
         vars.sort()
+        
         reg_var_mapping, ir_assembly = self.generate_reg_var_mapping(ir_assembly)
 
         print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
