@@ -22,9 +22,9 @@ def get_var(var):
 
 class GRAPH():
     def __init__(self):
-        self.temp_caller_saved_registers = {'%eax', '%ecx', '%edx'}
-        self.regs_proirity_order = ['%eax', '%ecx', '%edx', '%ebx', '%esi', '%edi']
-        self.compare_register_clash = {"%eax"}
+        self.temp_caller_saved_registers = {'ra', 't0', 't1', 't2', 't3', 't4', 't5', 't6', 'a0', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'}
+        self.regs_proirity_order = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 't0', 't1', 't2', 't3', 't4', 't5', 't6']
+        self.compare_register_clash = {}
         self.graph = {}
 
     def get_node(self, key):
