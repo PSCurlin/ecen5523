@@ -12,6 +12,7 @@ def get_liveness(block, starting_liveness = set()):
     result = []
     prev_live_vars = starting_liveness
     result.append(list(prev_live_vars))
+    # import ipdb; ipdb; ipdb.set_trace()
     for inst in reversed(block):
         line_liveness = prev_live_vars
         keywords = inst.split(' ')
@@ -26,11 +27,11 @@ def get_liveness(block, starting_liveness = set()):
             line_liveness = remove_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])
             line_liveness = add_liveness_var(line_liveness, keywords[3])
-        elif keywords[0] == 'print':
+        elif keywords[0] in ['print', 'nez']:
             line_liveness = add_liveness_var(line_liveness, keywords[1])
         elif keywords[0] in ['beq', 'bne', 'bge', 'ble', 'bgt', 'blt']:
-            line_liveness = add_liveness_var(line_liveness, keywords[2])
-            line_liveness = add_liveness_var(line_liveness, keywords[3])            
+            line_liveness = add_liveness_var(line_liveness, keywords[1])
+            line_liveness = add_liveness_var(line_liveness, keywords[2])            
         elif keywords[0] in ["set_subscript", "list_add"]:
             line_liveness = remove_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])

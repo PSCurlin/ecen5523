@@ -538,9 +538,21 @@ class REGISTER_ALLOCATION():
                 liveness_list = self.generate_liveness_using_blocks(ir_list)  
                 save_file(ir_list, "demo1.s")
                 
-                og_irx86_list = self.irx86_list
+                og_irx86_list = ir_list
                 graph = GRAPH()
-                reg_var_mapping, self.irx86_list, stack_mapping  = graph.get_reg_var_mapping(self.irx86_list, liveness_list)
+                reg_var_mapping, ir_list, stack_mapping  = graph.get_reg_var_mapping(ir_list, liveness_list)
+                
+                # interference_graph = self.generate_interference_graph(ir_list, liveness_list)
+                # if 'function' in ir_list[0]:
+                #     stack_prev = len(ir_list[0].split(' '))
+                # else:
+                #     stack_prev = 0
+                # interference_graph, stack_mapping = self.coloring_graph(interference_graph, stack_prev)
+                # og_irx86_list = ir_list
+                # vars = list(interference_graph.keys())
+                # vars.sort()
+                # reg_var_mapping = self.generate_reg_var_mapping(interference_graph, ir_list)
+
 
                 replacements, is_spill_code_present = self.check_for_spill_code(reg_var_mapping, ir_list)
 

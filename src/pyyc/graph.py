@@ -33,7 +33,7 @@ class GRAPH():
         return self.graph[key]
 
     def add_neighbors(self, var1, var2):
-        if var1 != var2:
+        if var1 != var2 and not var1.isdigit() and not var2.isdigit():
             var1_node = self.get_node(var1)
             var2_node = self.get_node(var2)
             var1_node.neighbors.add(var2)
@@ -50,11 +50,11 @@ class GRAPH():
             live_vars = liveness_list[i]
             keywords = inst.split(' ')
 
-            for i in range(len(keywords)):
-                keywords[i] = get_var(keywords[i])
+            for j in range(len(keywords)):
+                keywords[j] = get_var(keywords[j])
 
             target_var = get_var(keywords[1])
-            if op == "li":
+            if op in ["li"]:
                 for live_var in live_vars:
                     if live_var == target_var or live_var == src_op:
                         continue
@@ -75,7 +75,7 @@ class GRAPH():
                         self.add_neighbors(live_var, src1_op)
                     if (not src1_op.isdigit() and src1_op != 'x0') and (not src2_op.isdigit()):
                         self.add_neighbors(src1_op, src2_op)
-            elif op == "neg":
+            elif op in ["neg"]:
                 for live_var in live_vars:
                     if live_var == target_var or live_var == src_op:
                         continue
