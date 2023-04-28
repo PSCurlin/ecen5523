@@ -472,7 +472,10 @@ class REGISTER_ALLOCATION():
             if keywords[0] in ["j", "function"] or len(keywords) <= 1:
                 continue
             reg_var_mapping[i] = []
-            if keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big', 'is_true', 'create_list', 'assign_stack']:
+            if keywords[0] in ['print']:
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
+            elif keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big',
+                                'is_true', 'create_list', 'assign_stack']:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
            
@@ -537,7 +540,7 @@ class REGISTER_ALLOCATION():
                 og_irx86_list = ir_list
                 graph = GRAPH()
                 reg_var_mapping, ir_list, stack_mapping  = graph.get_reg_var_mapping(ir_list, liveness_list)
-                import ipdb; ipdb.set_trace()
+
                 # interference_graph = self.generate_interference_graph(ir_list, liveness_list)
                 # if 'function' in ir_list[0]:
                 #     stack_prev = len(ir_list[0].split(' '))

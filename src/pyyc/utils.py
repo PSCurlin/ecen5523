@@ -1,5 +1,7 @@
 
 
+
+
 MAIN_STARTER_ASSEMBLY = [
     ".globl main", 
     "main:",
@@ -9,6 +11,7 @@ MAIN_STARTER_ASSEMBLY = [
     "\tpushl %ebx # save callee saved registers",
     "\tpushl %esi",
     "\tpushl %edi",
+
     ""]
 
 FUNC_STARTER_ASSEMBLY = [ 
