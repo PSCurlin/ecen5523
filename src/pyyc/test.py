@@ -1,8 +1,9 @@
-a = 2
-print(1+a)
-while(a):
-    a = a +-1
-
+# a = 2
+# print(1+a)
+# while(a):
+#     a = a +-1
+a = 8
+print(a)
 
 
 

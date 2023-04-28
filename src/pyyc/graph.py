@@ -324,11 +324,11 @@ class GRAPH():
         
         reg_var_mapping, ir_assembly = self.generate_reg_var_mapping(ir_assembly)
 
-        print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
-        # import ipdb; ipdb.set_trace()
-        for k in self.graph:
-            print(k, self.graph[k].target_reg, self.graph[k].neighbors, self.graph[k].dont_assign)
+        # print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+        # # import ipdb; ipdb.set_trace()
+        # for k in self.graph:
+        #     print(k, self.graph[k].target_reg, self.graph[k].neighbors, self.graph[k].dont_assign)
 
-        print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
+        # print(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::")
 
         return reg_var_mapping, ir_assembly, stack_mapping

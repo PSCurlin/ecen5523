@@ -1,23 +1,26 @@
 def add_liveness_var(line_liveness, var):
+    var = var.split(',')[0]
     if var == 'x0':
         pass
     elif not var.isdigit():
-        line_liveness.add(var.split(',')[0])
+        line_liveness.add(var)
     return line_liveness
+
 def remove_var(line_liveness, var):
+    var = var.split(',')[0]
     if var in line_liveness:
-        line_liveness.remove(var.split(',')[0])
+        line_liveness.remove(var)
     return line_liveness
+
 def get_liveness(block, starting_liveness = set()):
     result = []
     prev_live_vars = starting_liveness
     result.append(list(prev_live_vars))
-    # import ipdb; ipdb; ipdb.set_trace()
     for inst in reversed(block):
         line_liveness = prev_live_vars
         keywords = inst.split(' ')
-
-        if keywords[0] == ['li', 'return', 'eval_input', 'create_dict']:
+        
+        if keywords[0] in ['li', 'return', 'eval_input', 'create_dict']:
             line_liveness = remove_var(line_liveness, keywords[1])
         elif keywords[0] in ['neg', 'mv', 'addi','is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big',
                              'inject_big', 'is_true', 'create_list', 'assign_stack', 'xori','snez', 'seqz', "get_fun_ptr", "get_free_vars"]:

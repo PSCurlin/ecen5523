@@ -14,7 +14,7 @@ from graph import *
 from utils import *
 from liveness import *
 from ir_assembly import *
-
+from compile_utils import *
 
 def save_file(file_content_list, filename):
     prog = "\n".join(file_content_list)
@@ -167,13 +167,6 @@ class REGISTER_ALLOCATION():
         for node in cfg:
             self.per_block_liveness(cfg, node.key, meta_data_dict)
 
-        # for node in cfg:
-        #     self.per_block_liveness(cfg, node.key, meta_data_dict)
-        #     node.code_block = self.dead_code_elimination(node.code_block, node.liveness, node.block_type)
-        #     node.code_block = self.remove_none(node.code_block)
-        #     self.per_block_liveness(cfg, node.key, meta_data_dict)
-        #     print(node.code_block)
-
         for node in reversed(cfg):    
             result.extend(node.liveness[0:len(node.liveness)-1])
             ir_code.extend(node.code_block)
@@ -187,9 +180,6 @@ class REGISTER_ALLOCATION():
     def generate_liveness_using_blocks(self, ir_assembly):
         control_graph = CFG()
         cfg, meta_data_dict = control_graph.create_cfg(ir_assembly)
-        # lvn = LVN()
-        # cfg = lvn.create_dependency_dict(cfg)
-
         blocks, liveness = self.club_liveness(cfg, meta_data_dict)        
         
         print("####################################")
@@ -200,7 +190,7 @@ class REGISTER_ALLOCATION():
         print("####################################")
         
         # for b in blocks:
-        #     print(b.key, b.code_block, b.links, b.liveness[0], b.loop_dependencies)
+        #     print(b.key, b.code_block, b.liveness)
         # print("####################################")
         return liveness
 
@@ -277,28 +267,39 @@ class REGISTER_ALLOCATION():
             index -= 1
         return None, stack_loc
 
+    def get_inst(self, value, reg):
+        if value.isdigit():
+            return "li {reg}, {value}".format(reg=reg, value=value)
+        else:
+            return "add {reg}, x0, {value}".format(reg=reg, value=value)
+
+
     def fix_function_calls(self, ir_list):
         for i in range(len(ir_list)):
             if ir_list[i] is None:
                 continue
             keywords = ir_list[i].split(' ') 
+
+            for j in range(len(keywords)):
+                keywords[j] = get_var(keywords[j])
+
             op = keywords[0]
             if op in ['print']:
-                value = keywords[-1]
-                ir_list[i] = 'pushl ' + value + '\n' + 'call print_any' + '\n' + 'addl $4, %esp'
+                value = keywords[1]
+                ir_list[i] = PRINT_STR.format(push = self.get_inst(value, 'a0'))
             elif op in ['eval_input']:
-                value = keywords[-1]
-                ir_list[i] = 'call {op}\nmovl a1, {value}'.format(value = value, op= "eval_input_pyobj")
+                value = keywords[1]
+                ir_list[i] = EVAL_INPUT.format(value = value, op= "eval_input_pyobj")
             elif op in ['create_dict']:
                 value = keywords[-1]
-                ir_list[i] = 'call {op}\nmovl a1, {value}'.format(value = value, op=op)
+                ir_list[i] = CREATE_DICT.format(value = value, op=op)
             elif op in ["assign_stack"]:
                 value =  keywords[2].replace('$', '') + "(%ebp)"
-                ir_list[i] = 'movl {value}, {var}'.format(value = value, var = keywords[1])
+                ir_list[i] = ASSIGN_STACK.format(value = value, var = keywords[1])
             elif 'not_equals_big' in ir_list[i]:  
-                ir_list[i] = "pushl {y}\npushl {x}\ncall not_equal\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                ir_list[i] = NOT_EQUALS_BIG.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1])
             elif 'equals_big' in ir_list[i]:
-                ir_list[i] = "pushl {y}\npushl {x}\ncall equal\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3])
+                ir_list[i] = EQUALS_BIG.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1])
             elif 'not_equals' in ir_list[i]: 
                 if keywords[2].isdigit():
                     ir_list[i] = "xori {tgt}, {src1}, {src2}\nsnez{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
@@ -310,29 +311,24 @@ class REGISTER_ALLOCATION():
                 else:
                     ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif op in ["get_subscript", "add", "create_closure"]:
-                ir_list[i] = "pushl {y}\npushl {x}\ncall {op}\nmovl a1, {z}\naddl $8, %esp".format(x=keywords[1], y=keywords[2], z=keywords[3], op=op)
+                ir_list[i] = FUNCTION_CALL_2_args.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ["get_fun_ptr", "get_free_vars"]:
-                ir_list[i] = "pushl {x}\ncall {op}\nmovl a1, {tgt}\naddl $4, %esp".format(x=keywords[1], tgt=keywords[2], op=op)
+                ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ["function_return"]:
                 push_str = ""
                 stack_length = 0
-                j = len(keywords)-2
+                j = len(keywords)-1
                 while (j > 1):
-                    push_str += "pushl {var}\n".format(var=keywords[j])
+                    push_str += self.get_inst(keywords[j], 'a' + str(j-2)) + "\n"
                     j -= 1
                     stack_length += 4
-                ir_list[i] = push_str + "call *{op}\nmovl a1, {z}\naddl ${stack_length}, %esp".format(z=keywords[-1], op=keywords[1], stack_length = str(stack_length))                    
+                ir_list[i] = push_str + "call *{op}\nmovl a1, {z}".format(z=keywords[2], op=keywords[1])                    
             elif op in ['is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', "is_big", "project_big", "inject_big", 
                         "is_true", 'create_list']: 
-                src_reg = keywords[1].split(",")[0]
-                target_reg = keywords[-1]
-                ir_list[i] = 'pushl {src_reg}\ncall {op}\nmovl a1, {target_reg}\naddl $4, %esp'.format(op=op,target_reg=target_reg,src_reg=src_reg)
+                ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
+                
             elif op in ['set_subscript']:
-                reg = keywords[4]
-                value = keywords[3].split(',')[0]
-                index = keywords[2].split(',')[0]
-                list_name = keywords[1].split(',')[0]
-                ir_list[i] = "pushl {value}\npushl {index}\npushl {list}\ncall {op}\nmovl a1, {reg}\naddl $12, %esp".format(list = list_name, reg = reg, value= value, index=index, op=op )
+                ir_list[i] = FUNCTION_CALL_3_args.format(push_z = self.get_inst(keywords[4], 'a2'), push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ['function']:
                 ir_list[i] = None
 
@@ -541,7 +537,7 @@ class REGISTER_ALLOCATION():
                 og_irx86_list = ir_list
                 graph = GRAPH()
                 reg_var_mapping, ir_list, stack_mapping  = graph.get_reg_var_mapping(ir_list, liveness_list)
-                
+                import ipdb; ipdb.set_trace()
                 # interference_graph = self.generate_interference_graph(ir_list, liveness_list)
                 # if 'function' in ir_list[0]:
                 #     stack_prev = len(ir_list[0].split(' '))
