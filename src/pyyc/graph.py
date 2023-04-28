@@ -145,7 +145,7 @@ class GRAPH():
                     self.add_neighbors(free_var, target_var)
                     self.add_neighbors(live_var, free_var)
 
-            elif op in ["bez"]:
+            elif op in ["beqz"]:
                 target_node = self.get_node(target_var)
                 for live_var in live_vars:
                     if live_var == target_var:
@@ -293,15 +293,16 @@ class GRAPH():
             if keywords[0] in ["j", "function"] or len(keywords) <= 1:
                 continue
             reg_var_mapping[i] = []
-            if keywords[0] in ['print', 'eval_input']:
+            if keywords[0] in ['print', 'eval_input', 'beqz']:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
+            
             elif keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big', 'is_true', 'create_list', 'assign_stack']:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i)           
             elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big", "get_subscript", "add", "xori", "add", "list_add", "create_closure"]:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i) 
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, get_var(keywords[1]), ir_list[i], i)
+                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, get_var(keywords[3]), ir_list[i], i)
             elif keywords[0] in ["set_subscript"]:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, get_var(keywords[2]), ir_list[i], i) 

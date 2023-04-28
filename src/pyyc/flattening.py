@@ -659,7 +659,7 @@ def add_boxing_layer(indent, left_operand, right_operand, target_var, func_name)
         add_flat_python(indent, "\t" + target_var + " = inject_bool(" + temp_project_l + ")", func_name)
         add_flat_python(indent, 'elif(' + is_left_var_big + "):", func_name)
         add_flat_python(indent, "\t" + temp_project_l + " = project_big(" + left_operand + ")", func_name)
-        add_flat_python(indent, "\t" + temp_project_l + " = add(" + temp_project_l + ", " + temp_project_l + ")", func_name)
+        add_flat_python(indent, "\t" + temp_project_l + " = list_add(" + temp_project_l + ", " + temp_project_l + ")", func_name)
         add_flat_python(indent, "\t" + target_var + " = inject_big(" + temp_project_l + ")", func_name)
     else:
         is_right_var_int = get_new_box_is_int()
@@ -707,7 +707,7 @@ def add_boxing_layer(indent, left_operand, right_operand, target_var, func_name)
         add_flat_python(indent + "\t", 'if(' + is_right_var_big + "):", func_name)
         add_flat_python(indent, "\t\t" + temp_project_l + " = project_big(" + left_operand + ")", func_name)
         add_flat_python(indent, "\t\t" + temp_project_r + " = project_big(" + right_operand + ")", func_name)
-        add_flat_python(indent, "\t\t" + temp_project_l + " = add(" + temp_project_l + ", " + temp_project_r + ")", func_name)
+        add_flat_python(indent, "\t\t" + temp_project_l + " = list_add(" + temp_project_l + ", " + temp_project_r + ")", func_name)
         add_flat_python(indent, "\t\t" + target_var + " = inject_big(" + temp_project_l + ")", func_name)
         
     return target_var

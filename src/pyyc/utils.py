@@ -1,17 +1,21 @@
-
+HEADER_ASSEMBLY = [
+    '\t.file   "hello.c"',
+	'\t.option pic',
+	'\t.text'
+]
 
 
 
 MAIN_STARTER_ASSEMBLY = [
-    ".globl main", 
+    "",
+    "\t.align  1",
+	"\t.globl  main",
+	"\t.type   main, @function",
     "main:",
-    "\tpushl %ebp # save caller’s base pointer", 
-    "\tmovl %esp, %ebp # set our base pointer", 
-    "\tsubl ${var_space}, %esp # allocate for local vars",
-    "\tpushl %ebx # save callee saved registers",
-    "\tpushl %esi",
-    "\tpushl %edi",
-
+    "\taddi    sp,sp,-{var_space}",
+	"\tsd      ra,24(sp)",
+	"\tsd      s0,16(sp)",
+	"\taddi    s0,sp,{var_space}",
     ""]
 
 FUNC_STARTER_ASSEMBLY = [ 
@@ -38,13 +42,12 @@ FUNC_END_OF_ASSEMBLY_FILE = [
 
 MAIN_END_OF_ASSEMBLY_FILE = [
     "",
-    "\tpopl %edi # restore callee saved registers",
-    "\tpopl %esi",
-    "\tpopl %ebx",
-    "\tmovl $0, %eax # set return value",
-    "\tmovl %ebp, %esp # restore esp",
-    "\tpopl %ebp # restore ebp (alt. “leave”)",
-    "\tret # jump execution to call site",
+    "\tli      a5,0",
+	"\tmv      a0,a5",
+	"\tld      ra,24(sp)",
+	"\tld      s0,16(sp)",
+	"\taddi    sp,sp,{var_space}",
+	"\tjr      ra",
     ""]
 
 

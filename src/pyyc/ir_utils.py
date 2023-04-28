@@ -9,7 +9,7 @@ XORI_STR = "xori {tgt}, {src1}, {imm}"
 XORI_0_STR = "xori {tgt}, {src1}, 0"
 
 BR_EQUALS_STR = "beq {src1}, {src2}, {label}"
-BEZ_STR = "bez {src}, {label}"
+BEZ_STR = "beqz {src}, {label}"
 
 LIST_ADD = "list_add {tgt} {arg1} {arg2}"
 CREATE_LIST_STR = "{func} {var} {len} " 

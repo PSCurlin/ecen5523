@@ -290,8 +290,10 @@ class REGISTER_ALLOCATION():
             elif op in ['eval_input']:
                 value = keywords[1]
                 ir_list[i] = EVAL_INPUT.format(value = value, op= "eval_input_pyobj")
+            elif op in ['list_add']:
+                ir_list[i] = FUNCTION_CALL_2_args.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op="add")
             elif op in ['create_dict']:
-                value = keywords[-1]
+                value = keywords[1]
                 ir_list[i] = CREATE_DICT.format(value = value, op=op)
             elif op in ["assign_stack"]:
                 value =  keywords[2].replace('$', '') + "(%ebp)"
@@ -310,7 +312,7 @@ class REGISTER_ALLOCATION():
                     ir_list[i] = "xori {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
                 else:
                     ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
-            elif op in ["get_subscript", "add", "create_closure"]:
+            elif op in ["get_subscript", "create_closure"]:
                 ir_list[i] = FUNCTION_CALL_2_args.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ["get_fun_ptr", "get_free_vars"]:
                 ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
@@ -627,9 +629,11 @@ if __name__ == "__main__":
     for func in assembly_prog:
         var_space = 4*len(stack_mapping[func]) if len(stack_mapping[func]) != 0 else 4
         if func == "main":
+
             starter_assembly = "\n".join(MAIN_STARTER_ASSEMBLY)
             starter_assembly = starter_assembly.format(var_space = str(var_space))
             end_assembly = "\n".join(MAIN_END_OF_ASSEMBLY_FILE)
+            end_assembly = end_assembly.format(var_space = str(var_space))
         else:
             start = "\n".join(FUNC_STARTER_ASSEMBLY)
             start = start.format(func=func, var_space = str(var_space))
@@ -645,7 +649,7 @@ if __name__ == "__main__":
 
         assembly_program = assembly_prog[func]
 
-        assembly_program = starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
+        assembly_program = "\n".join(HEADER_ASSEMBLY) + starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
         irx86_list.extend(assembly_program)
 
     if len(assembly_prog) == 0:

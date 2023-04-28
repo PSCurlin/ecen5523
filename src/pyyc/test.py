@@ -3,7 +3,8 @@
 # while(a):
 #     a = a +-1
 a = 8
-print(a)
+b = eval(input())
+print(a+b)
 
 
 

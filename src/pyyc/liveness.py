@@ -30,7 +30,7 @@ def get_liveness(block, starting_liveness = set()):
             line_liveness = remove_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])
             line_liveness = add_liveness_var(line_liveness, keywords[3])
-        elif keywords[0] in ['print', 'nez']:
+        elif keywords[0] in ['print', 'nez', 'beqz']:
             line_liveness = add_liveness_var(line_liveness, keywords[1])
         elif keywords[0] in ['beq', 'bne', 'bge', 'ble', 'bgt', 'blt']:
             line_liveness = add_liveness_var(line_liveness, keywords[1])

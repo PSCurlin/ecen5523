@@ -213,7 +213,7 @@ def gen_ir_assembly(n, stack_var_mapping, func_name):
             value1 = n.args[0].id if isinstance(n.args[0], Name) else str(n.args[0].value) 
             value2 = n.args[1].id if isinstance(n.args[1], Name) else str(n.args[1].value)
             update_assembly_instruction(func_name, GET_SUBSCRIPT_FUNC_STR.format(func = n.func.id, arg1=value1, arg2=value2, tgt=stack_var_mapping))
-        elif n.func.id in ["add"]:
+        elif n.func.id in ["list_add"]:
             value1 = n.args[0].id if isinstance(n.args[0], Name) else str(n.args[0].value) 
             value2 = n.args[1].id if isinstance(n.args[1], Name) else str(n.args[1].value)
             update_assembly_instruction(func_name, LIST_ADD.format(arg1=value1, arg2=value2, tgt=stack_var_mapping)) 
