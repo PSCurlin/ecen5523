@@ -10,11 +10,16 @@ def is_stack_loc(op):
         return True
     return False
 
-spill_var = 0 
+spill_var = {"n": 0} 
+
+def get_spill_index():
+    f = spill_var["n"]
+    spill_var["n"] += 1
+    return str(f)
+
 tmp_var_dict ={}
 def gen_new_temp_var(var_name, line_num):        
-    new_var = '__tp' + str(spill_var) + '_'
-    spill_var += 1
+    new_var = '__tp' + get_spill_index() + '_'
     if line_num in tmp_var_dict:
         tmp_var_dict[line_num].append({"tmp_var": new_var, "stk_loc": var_name})
     else:
