@@ -15,6 +15,7 @@ from utils import *
 from liveness import *
 from ir_assembly import *
 from compile_utils import *
+from spill import *
 
 def save_file(file_content_list, filename):
     prog = "\n".join(file_content_list)
@@ -77,10 +78,7 @@ class REGISTER_ALLOCATION():
         self.label_mappings["while"] += 1
         return str(label)
 
-    def is_stack_loc(self, op):    
-        if 'ebp' in op :
-            return True
-        return False
+    
     
     def gen_new_temp_var(self, var_name, line_num):        
         new_var = '__tp' + str(self.spill_var) + '_'
@@ -194,70 +192,6 @@ class REGISTER_ALLOCATION():
         # print("####################################")
         return liveness
 
-    def update_interference_graph(self, live_var, graph, dont_assign_set):
-        if live_var in graph:
-            graph[live_var]["dont_assign"].extend(dont_assign_set)
-        else:
-            graph[live_var] = {
-                "target_reg" : None,
-                "neighbors": [],
-                "dont_assign" : dont_assign_set
-            }  
-        return graph          
-
-    def assign_reg(self, interference_graph, var, stack_mapping):
-        no_no_regs = interference_graph[var]["dont_assign"] 
-        for reg in self.regs_proirity_order:
-            if reg not in no_no_regs:
-                interference_graph[var]["target_reg"] = reg
-                for nei in interference_graph[var]["neighbors"]:
-                    if interference_graph[nei]["target_reg"] == None:
-                        interference_graph[nei]["dont_assign"].append(reg)
-                break   
-        else:
-            # use stack
-            if var in stack_mapping:
-                stack_loc = stack_mapping[var]
-            else:
-                stack_loc = str(-4*(len(stack_mapping)+1)) + '(%ebp)'
-                stack_mapping[var] = stack_loc
-            interference_graph[var]["target_reg"] = stack_loc
-            for nei in interference_graph[var]["neighbors"]:
-                if interference_graph[nei]["target_reg"] == None:
-                    interference_graph[nei]["dont_assign"].append(stack_loc)
-        return interference_graph
-
-    def get_most_conflicting_var(self, interference_graph, ignore_vars):      
-        max_neighbors = 0
-        neighbor_to_start = None
-        for key in interference_graph:
-            if 'tp' in key and key not in ignore_vars:
-                return key
-            
-            if key not in ignore_vars and interference_graph[key]["target_reg"] == None:
-                if len(interference_graph[key]["neighbors"]) > max_neighbors:
-                    max_neighbors = len(interference_graph[key]["neighbors"])
-                    neighbor_to_start = key
-        
-        if neighbor_to_start == None:
-            vars = list(interference_graph.keys())
-            for var in vars:
-                if var not in ignore_vars:
-                    return var
-        return neighbor_to_start   
-
-    def coloring_graph(self, interference_graph, stack_prev):
-        vars = list(interference_graph.keys())
-        ignore_vars = []
-        ignore_vars_len = 0
-        stack_mapping = {}
-        while(len(vars) != ignore_vars_len): 
-            conflicting_var = self.get_most_conflicting_var(interference_graph, ignore_vars)
-            interference_graph = self.assign_reg(interference_graph, conflicting_var, stack_mapping)
-            ignore_vars.append(conflicting_var)
-            ignore_vars_len = len(ignore_vars)
-        return interference_graph, stack_mapping
-
     def remove_stack_mov_ops(self, starting_index, stack_loc):
         index = starting_index
         while(index >= 0):
@@ -334,21 +268,19 @@ class REGISTER_ALLOCATION():
             elif op in ['function']:
                 ir_list[i] = None
 
-    def get_reg(self, reg_var_mapping_dict, var_name):
-        for key in reg_var_mapping_dict:
-            for i in range(len(reg_var_mapping_dict[key])):
-                if reg_var_mapping_dict[key][i]["var"] == var_name:
-                    return reg_var_mapping_dict[key][i]["reg"]
-        return None
 
     def set_var(self, reg_var_mapping_dict, var_name, replace_var):
         for key in reg_var_mapping_dict:
             for i in range(len(reg_var_mapping_dict[key])):
                 if reg_var_mapping_dict[key][i]["var"] == var_name:
-                   
                    reg_var_mapping_dict[key][i]["var"] = replace_var
         return reg_var_mapping_dict
-        
+    
+    def is_stack_loc(self, op):    
+        if 'sp' in op :
+            return True
+        return False
+
     def check_for_spill_code(self, reg_var_mapping, ir_list):
         result = {}
         is_spill_code_present = False   
@@ -423,16 +355,7 @@ class REGISTER_ALLOCATION():
                     ops.append(operation + " " + src1_op + " "+ src2_op + " " + target_op) 
                     ops.append("movl " + target_op + ", " + keywords[3]) 
                     ops_str = "\n".join(ops)
-                    result[i] = ops_str
-
-            # elif operation in ["assign_stack"] and self.is_stack_loc(keywords[2]):
-            #     tgt_op = self.gen_new_temp_var(keywords[2], i)
-            #     is_spill_code_present = True
-            #     ops = ["assign_stack " + keywords[1] + ", " + tgt_op]
-            #     ops.append("movl {src}, {tgt}".format(src = tgt_op, tgt = keywords[2]))
-            #     ops_str = "\n".join(ops)
-            #     result[i] = ops_str 
-                
+                    result[i] = ops_str                
             elif operation in ["addl", "movl"] and self.is_stack_loc(keywords[1]) and self.is_stack_loc(keywords[2]):                
                 src_op = self.gen_new_temp_var(keywords[1], i)
                 tgt_op = self.gen_new_temp_var(keywords[2], i)
@@ -455,51 +378,6 @@ class REGISTER_ALLOCATION():
         while(None in l):
             l.remove(None)
 
-    def update_reg_var(self, reg_var_mapping, index, target_reg, var, ir_str, i):
-        if not var.isdigit():
-            reg_var_mapping[i].append({
-                "index": index,
-                "reg" : target_reg,
-                "var" : var
-            })
-            keywords = ir_str.split(' ')              
-            keywords[index] = keywords[index].replace(var, target_reg)
-            ir_str = " ".join(keywords)
-        return reg_var_mapping, ir_str
-
-    def generate_reg_var_mapping(self, interference_graph, ir_list):
-        reg_var_mapping = {}
-        for i in range(len(ir_list)):
-            keywords = ir_list[i].split(' ')
-            if keywords[0] in ["j", "function"] or len(keywords) <= 1:
-                continue
-            reg_var_mapping[i] = []
-            if keywords[0] in ['print']:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-            elif keywords[0] in ['li', 'neg' 'cmpl', 'is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big', 'inject_big',
-                                'is_true', 'create_list', 'assign_stack']:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
-           
-            elif keywords[0] in ["not_equals", "equals", "not_equals_big", "equals_big", "get_subscript", "add", "xori", "add", "list_add", "create_closure"]:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, interference_graph[keywords[3]]["target_reg"], keywords[3], ir_list[i], i)
-            elif keywords[0] in ["set_subscript"]:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 3, interference_graph[keywords[3]]["target_reg"], keywords[3], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 4, interference_graph[keywords[4]]["target_reg"], keywords[4], ir_list[i], i)
-            elif keywords[0] in ["get_free_vars", "get_fun_ptr", "beq"]:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 2, interference_graph[keywords[2]]["target_reg"], keywords[2], ir_list[i], i)
-            elif keywords[0] in ["function_return", "bez"]:
-                reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, interference_graph[keywords[1]]["target_reg"], keywords[1], ir_list[i], i)
-                for j in range(2, len(keywords)):
-                    reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, j, interference_graph[keywords[j]]["target_reg"], keywords[j], ir_list[i], i)
-                   
-        return reg_var_mapping
-  
     def replace_reg_with_vars(self, reg_var_mapping, stack_mapping, ir_list):
         for i in reg_var_mapping:
             if i >= len(ir_list) or ir_list[i] is None:
@@ -536,26 +414,13 @@ class REGISTER_ALLOCATION():
             stack_mapping = {}
             while(is_spill_code_present):
                 stack_mapping = {}
-                liveness_list = self.generate_liveness_using_blocks(ir_list)  
-                save_file(ir_list, "demo1.s")
+                liveness_list = self.generate_liveness_using_blocks(ir_list) 
                 
                 og_irx86_list = ir_list
                 graph = GRAPH()
                 reg_var_mapping, ir_list, stack_mapping  = graph.get_reg_var_mapping(ir_list, liveness_list)
 
-                # interference_graph = self.generate_interference_graph(ir_list, liveness_list)
-                # if 'function' in ir_list[0]:
-                #     stack_prev = len(ir_list[0].split(' '))
-                # else:
-                #     stack_prev = 0
-                # interference_graph, stack_mapping = self.coloring_graph(interference_graph, stack_prev)
-                # og_irx86_list = ir_list
-                # vars = list(interference_graph.keys())
-                # vars.sort()
-                # reg_var_mapping = self.generate_reg_var_mapping(interference_graph, ir_list)
-
-
-                replacements, is_spill_code_present = self.check_for_spill_code(reg_var_mapping, ir_list)
+                replacements, is_spill_code_present = check_for_spill_code(reg_var_mapping, ir_list)
 
                 for index in replacements:
                     og_irx86_list[index] = replacements[index]

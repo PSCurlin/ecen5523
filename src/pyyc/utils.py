@@ -19,24 +19,26 @@ MAIN_STARTER_ASSEMBLY = [
     ""]
 
 FUNC_STARTER_ASSEMBLY = [ 
+    "",
+    "\t.align  1",
+	"\t.globl  {func}",
+	"\t.type   main, @function",
     "{func}:",
-    "\tpushl %ebp # save caller’s base pointer", 
-    "\tmovl %esp, %ebp # set our base pointer", 
-    "\tsubl ${var_space}, %esp # allocate for local vars",
-    "\tpushl %ebx # save callee saved registers",
-    "\tpushl %esi",
-    "\tpushl %edi",
-    ""]
+    "\taddi    sp,sp,-{var_space}",
+	"\tsd      ra,24(sp)",
+	"\tsd      s0,16(sp)",
+	"\taddi    s0,sp,{var_space}",
+    ""
+]
 
 FUNC_END_OF_ASSEMBLY_FILE = [
     "",
-    # "\tmovl {return_value}, %eax # set return value",
-    "\tpopl %edi # restore callee saved registers",
-    "\tpopl %esi",
-    "\tpopl %ebx",
-    "\tmovl %ebp, %esp # restore esp",
-    "\tpopl %ebp # restore ebp (alt. “leave”)",
-    "\tret # jump execution to call site",
+    "\tli      a5,0",
+	"\tmv      a0,a5",
+	"\tld      ra,24(sp)",
+	"\tld      s0,16(sp)",
+	"\taddi    sp,sp,{var_space}",
+	"\tjr      ra",
     ""]
 
 
@@ -52,20 +54,26 @@ MAIN_END_OF_ASSEMBLY_FILE = [
 
 
 EMPTY_FILE = [
-    ".globl main",
-    "main:",
-	"pushl %ebp", # save caller’s base pointer
-	"movl %esp, %ebp", # set our base pointer
-	"subl $4, %esp", # allocate for local vars
-	"pushl %ebx", # save callee saved registers
-	"pushl %esi",
-	"pushl %edi",
+    '\t.file   "hello.c"',
+	'\t.option pic',
+	'\t.text',
 
-	"popl %edi", # restore callee saved registers
-	"popl %esi",
-	"popl %ebx",
-	"movl $0, %eax", # set return value
-	"movl %ebp, %esp", # restore esp
-	"popl %ebp", # restore ebp (alt. “leave”)
-	"ret", # jump execution to call site
+    "",
+    "\t.align  1",
+	"\t.globl  main",
+	"\t.type   main, @function",
+    "main:",
+    "\taddi    sp,sp,0",
+	"\tsd      ra,24(sp)",
+	"\tsd      s0,16(sp)",
+	"\taddi    s0,sp,0",
+
+	"",
+    "\tli      a5,0",
+	"\tmv      a0,a5",
+	"\tld      ra,24(sp)",
+	"\tld      s0,16(sp)",
+	"\taddi    sp,sp,0",
+	"\tjr      ra",
+    ""
 ]
