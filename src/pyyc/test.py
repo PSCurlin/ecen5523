@@ -2,11 +2,7 @@
 # print(1+a)
 # while(a):
 #     a = a +-1
-x = 2
-y = -x
-print(x)
-print(y)
-
+print(-1)
 
 
 # # if0

@@ -63,15 +63,17 @@ class GRAPH():
             elif op in ["add", "addi"]:
                 src1_op = get_var(keywords[2])
                 src2_op = get_var(keywords[3]) 
+                if not src2_op.isdigit():
+                    self.add_neighbors(src2_op, target_var)
+                if not src1_op.isdigit() and src1_op != 'x0':
+                    self.add_neighbors(src1_op, target_var)
                 for live_var in live_vars:
                     if live_var == target_var or live_var == src_op:
                         continue
                     self.add_neighbors(live_var, target_var)
                     if not src2_op.isdigit():
-                        self.add_neighbors(src2_op, target_var)
                         self.add_neighbors(live_var, src2_op)
                     if not src1_op.isdigit() and src1_op != 'x0':
-                        self.add_neighbors(src1_op, target_var)
                         self.add_neighbors(live_var, src1_op)
                     if (not src1_op.isdigit() and src1_op != 'x0') and (not src2_op.isdigit()):
                         self.add_neighbors(src1_op, src2_op)
@@ -139,10 +141,7 @@ class GRAPH():
                     live_var_node = self.get_node(live_var)
                     live_var_node.dont_assign = live_var_node.dont_assign.union(self.temp_caller_saved_registers)
 
-                    self.add_neighbors(tgt_var, target_var)
                     self.add_neighbors(live_var, tgt_var)
-
-                    self.add_neighbors(free_var, target_var)
                     self.add_neighbors(live_var, free_var)
 
             elif op in ["beqz"]:
@@ -156,34 +155,41 @@ class GRAPH():
                 target_node = self.get_node(target_var)
                 src_op1 = get_var(keywords[1])
                 src_op2 = get_var(keywords[2])
+
+
+                self.add_neighbors(src_op1, target_var)
+                self.add_neighbors(src_op2, target_var)
                 for live_var in live_vars:
                     if live_var != src_op1 and not src_op1.isdigit():
                         self.add_neighbors(live_var, src_op1)
-                        self.add_neighbors(src_op1, target_var)
                     if live_var != src_op2 and not src_op2.isdigit():
                         self.add_neighbors(live_var, src_op2)
-                        self.add_neighbors(src_op2, target_var)
+                        
             
             elif op in ["xori"]:
                 target_node = self.get_node(target_var)
                 src_op1 = get_var(keywords[2])
                 src_op2 = get_var(keywords[3])
+                if not src_op1.isdigit():
+                    self.add_neighbors(src_op1, target_var)
+                if not src_op2.isdigit():
+                    self.add_neighbors(src_op2, target_var)
                 for live_var in live_vars:
                     if live_var == target_var:
                         continue
                     self.add_neighbors(live_var, target_var)
                     if not src_op1.isdigit():
                         self.add_neighbors(live_var, src_op1)
-                        self.add_neighbors(src_op1, target_var)
                     if not src_op2.isdigit():
                         self.add_neighbors(live_var, src_op2)
-                        self.add_neighbors(src_op2, target_var)
 
             elif op in ['project_int', 'is_int', 'inject_int', 'project_bool', 'is_bool',  'inject_bool', 'project_big', 'is_big', 'inject_big', 'is_true', 'create_list']:  
                 # caller saved registers will interfer with everything in live_vars               
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.temp_caller_saved_registers)
-                src_op =  get_var(keywords[1])
+                src_op =  get_var(keywords[2])
+                if not src_op.isdigit():    
+                    self.add_neighbors(target_var, src_op)
                 for live_var in live_vars:
                     if live_var == target_var:
                         continue
@@ -193,15 +199,22 @@ class GRAPH():
 
                     if not src_op.isdigit():
                         self.add_neighbors(live_var, src_op)
-                        self.add_neighbors(target_var, src_op)
 
+                
                     
             elif op in ["equals", "not_equals", "equals_big", "not_equals_big", "get_subscript", "add", "assign_stack"]:
                 # compare saved registers will interfere with live_vars
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.compare_register_clash)
-                src_op1 = get_var(keywords[1])
-                src_op2 = get_var(keywords[2])
+                src_op1 = get_var(keywords[2])
+                src_op2 = get_var(keywords[3])
+                if not src_op1.isdigit():
+                    self.add_neighbors(target_var, src_op1)
+                    src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)
+                if not src_op2.isdigit():
+                    self.add_neighbors(target_var, src_op2)
+                    src_op2_node.dont_assign = src_op2_node.dont_assign.union(self.compare_register_clash)
+                
                 for live_var in live_vars:
                     if live_var == target_var: 
                         continue
@@ -210,13 +223,9 @@ class GRAPH():
                     live_var_node.dont_assign = live_var_node.dont_assign.union(self.compare_register_clash)
                     if not src_op1.isdigit():
                         src_op1_node = self.get_node(src_op1)
-                        src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)                        
-                        self.add_neighbors(target_var, src_op1)
                         self.add_neighbors(src_op1, live_var)
                     if not src_op2.isdigit():
                         src_op2_node = self.get_node(src_op2)
-                        src_op2_node.dont_assign = src_op2_node.dont_assign.union(self.compare_register_clash)                        
-                        self.add_neighbors(target_var, src_op2)
                         self.add_neighbors(src_op2, live_var)
 
     def assign_reg(self, var, stack_mapping):
