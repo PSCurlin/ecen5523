@@ -2,11 +2,11 @@
 # print(1+a)
 # while(a):
 #     a = a +-1
-a = 8
-b = eval(input())
-print(a+b)
-
-
+tmp0 = -eval(input())
+tmp1 = tmp0 + 23
+tmp0 = eval(input())
+tmp2 = tmp0 + tmp1
+print(tmp2)
 
 
 

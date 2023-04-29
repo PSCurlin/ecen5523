@@ -274,7 +274,8 @@ class GRAPH():
         return stack_mapping
 
     def update_reg_var(self, reg_var_mapping, index, var, ir_str, i):
-        if not var.isdigit() and '-' not in var: 
+        if not var.isdigit() and '-' not in var and 'x0' not in var: 
+
             target_reg = self.graph[get_var(var)].target_reg
             reg_var_mapping[i].append({
                 "index": index,

@@ -25,7 +25,7 @@ pyyc = os.path.join(root_dir, 'pyyc')
 runtime_dir = os.path.join(root_dir, 'runtime')
 runtime_lib = os.path.join(runtime_dir, 'libpyyruntime.a')
 
-cc = ['gcc', '-m32', '-g','-lm']
+cc = ['gcc', '-g','-lm']
 
 default_pyyctests = [os.path.join(this_dir, 'resources')]
 default_outof = 100
@@ -137,7 +137,7 @@ class Pyyctest:
 
     def link(self):
         # type: () -> Result
-        popen = subprocess.Popen(cc + [self.starget, runtime_lib, '-o', self.exe],
+        popen = subprocess.Popen(cc + [self.starget, runtime_lib, '-lm','-o', self.exe],
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                  preexec_fn = lambda: os.setpgid(0, 0))
         return popen_result(popen)
