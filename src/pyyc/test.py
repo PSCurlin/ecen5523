@@ -2,8 +2,9 @@
 # print(1+a)
 # while(a):
 #     a = a +-1
-print(-1)
-
+x = 1
+y = 2
+print(x + y)
 
 # # if0
 # tp_check_type_0 = is_int(_x)

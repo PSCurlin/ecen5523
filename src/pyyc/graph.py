@@ -210,9 +210,11 @@ class GRAPH():
                 src_op2 = get_var(keywords[3])
                 if not src_op1.isdigit():
                     self.add_neighbors(target_var, src_op1)
+                    src_op1_node = self.get_node(src_op1)
                     src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)
                 if not src_op2.isdigit():
                     self.add_neighbors(target_var, src_op2)
+                    src_op2_node = self.get_node(src_op2)
                     src_op2_node.dont_assign = src_op2_node.dont_assign.union(self.compare_register_clash)
                 
                 for live_var in live_vars:
@@ -242,7 +244,7 @@ class GRAPH():
             if var in stack_mapping:
                 stack_loc = stack_mapping[var]
             else:
-                stack_loc = str(-4*(len(stack_mapping)+1)) + '(%ebp)'
+                stack_loc = str(-4*(len(stack_mapping)+1)) + '(sp)'
                 stack_mapping[var] = stack_loc
 
             self.graph[var].target_reg = stack_loc

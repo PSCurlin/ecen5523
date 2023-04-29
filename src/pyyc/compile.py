@@ -387,7 +387,7 @@ class REGISTER_ALLOCATION():
                 keywords = ir_list[i].split(' ')
                 keywords[m["index"]] = keywords[m["index"]].replace(m["reg"], m["var"])
                 
-                if '%ebp' in ir_list[i]:
+                if '(sp)' in ir_list[i]:
                     for entry in stack_mapping:
                         if stack_mapping[entry] == keywords[1].split(',')[0]:
                             keywords[1] = keywords[1].replace(keywords[1].split(',')[0], entry)
