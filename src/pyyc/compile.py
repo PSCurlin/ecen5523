@@ -419,9 +419,7 @@ class REGISTER_ALLOCATION():
                 og_irx86_list = ir_list
                 graph = GRAPH()
                 reg_var_mapping, ir_list, stack_mapping  = graph.get_reg_var_mapping(ir_list, liveness_list)
-
                 replacements, is_spill_code_present = check_for_spill_code(reg_var_mapping, ir_list)
-
                 for index in replacements:
                     og_irx86_list[index] = replacements[index]
                 ir_list = og_irx86_list
@@ -435,6 +433,8 @@ class REGISTER_ALLOCATION():
                     ir_list = ("\n".join(ir_list)).split("\n")
                     self.remove_same_op_movl(ir_list)
                     self.remove_none(ir_list)
+                    save_file(ir_list, "demo1.s")
+                # import ipdb; ipdb.set_trace()
             self.remove_none(ir_list)
             self.fix_function_calls(ir_list)
             self.remove_none(ir_list)
