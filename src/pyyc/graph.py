@@ -60,8 +60,9 @@ class GRAPH():
                         continue
                     self.add_neighbors(live_var, target_var)
             elif op in ["ld", "sd"]:
+                target_var, src_op = get_var(keywords[2]), get_var(keywords[1])
                 target_node = self.get_node(target_var)
-                src_op = get_var(keywords[2])
+                
                 if not src_op.isdigit():
                     self.add_neighbors(src_op, target_var)
                 for live_var in live_vars:
