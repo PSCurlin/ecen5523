@@ -514,6 +514,16 @@ if __name__ == "__main__":
 
         assembly_program = assembly_prog[func]
 
+        # import ipdb; ipdb.set_trace()
+        for i in range(len(assembly_program)):
+            op = assembly_program[i].split(' ')[0]
+            if op == '\tsd':
+                
+                if '(sp)' not in assembly_program[i]:
+                    
+                    k = assembly_program[i].split(' ')
+                    assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[2], src=k[1].split(',')[0])
+
         assembly_program = "\n".join(HEADER_ASSEMBLY) + starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
         irx86_list.extend(assembly_program)
 
