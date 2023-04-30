@@ -518,9 +518,11 @@ if __name__ == "__main__":
         for i in range(len(assembly_program)):
             op = assembly_program[i].split(' ')[0]
             if op == '\tsd':
-                
                 if '(sp)' not in assembly_program[i]:
-                    
+                    k = assembly_program[i].split(' ')
+                    assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[2], src=k[1].split(',')[0])
+            if op == '\tld':
+                if '(sp)' not in assembly_program[i]:
                     k = assembly_program[i].split(' ')
                     assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[2], src=k[1].split(',')[0])
 
