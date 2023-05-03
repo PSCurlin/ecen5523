@@ -70,7 +70,6 @@ class CFG():
 
     def get_loop_block_dependencies(self, loop_key):
         loop_index = self.meta_data_dict[loop_key]
-        # import ipdb; ipdb.set_trace()
         while_index = self.meta_data_dict["while" + loop_key.replace("loop", "")]
         dependency_blocks = []
         current_index = loop_index

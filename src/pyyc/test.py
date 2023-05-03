@@ -1,1 +1,4 @@
-print(int((1 and 2) == (3 and 5)))
+x = 1
+y = 2
+z = { x : y}
+print(z)
