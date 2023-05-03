@@ -419,7 +419,7 @@ if __name__ == "__main__":
                     assembly_prog[func][i] = "\nadd {val}, x0, a0  # return ".format(val= return_value)                
 
             end = "\n".join(FUNC_END_OF_ASSEMBLY_FILE)
-            end_assembly = end
+            end_assembly = end.format(var_space = str(var_space))
 
         assembly_program = assembly_prog[func]
 
