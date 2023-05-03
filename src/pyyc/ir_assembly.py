@@ -184,24 +184,9 @@ def gen_ir_assembly(n, stack_var_mapping, func_name):
             left_op = n.args[0].left.id if isinstance(n.args[0].left, Name) else "$" + str(n.args[0].left.value)
             ops = 'equals ' if isinstance(n.args[0].ops[0], Eq) else 'not_equals '
             update_assembly_instruction(func_name, INT_STR.format(op=ops, left_op=left_op, right_op=right_op, tgt=stack_var_mapping))       
-        elif n.func.id in ["is_int", "project_int", "inject_int"]:
+        elif n.func.id in ["is_int", "project_int", "inject_int", "is_big", "project_big", "inject_big", "is_true", "is_bool", "project_bool", "inject_bool"]:
             entity = n.args[0].id if isinstance(n.args[0], Name) else str(n.args[0].value)
             update_assembly_instruction(func_name, DATA_TYPE_STR.format(func=n.func.id, src=entity, tgt=stack_var_mapping)) 
-            
-        elif n.func.id in ["is_bool", "project_bool", "inject_bool"]: 
-            if isinstance(n.args[0], Name):
-                entity = n.args[0].id 
-            else:
-                entity = str(n.args[0].value)
-            update_assembly_instruction(func_name, DATA_TYPE_STR.format(func=n.func.id, src=entity, tgt=stack_var_mapping))
-
-        elif n.func.id in ["is_big", "project_big", "inject_big", "is_true"]: 
-            if isinstance(n.args[0], Name):
-                entity = n.args[0].id 
-            else:
-                entity = str(n.args[0].value)
-            update_assembly_instruction(func_name, DATA_TYPE_STR.format(func=n.func.id, src=entity, tgt=stack_var_mapping))
-
         elif n.func.id in ["create_list"]: 
             update_assembly_instruction(func_name, CREATE_LIST_STR.format(func=n.func.id, len=str(n.args[0].value), var=stack_var_mapping))
         elif n.func.id in ["set_subscript"]:

@@ -524,7 +524,7 @@ if __name__ == "__main__":
             if op == '\tld':
                 if '(sp)' not in assembly_program[i]:
                     k = assembly_program[i].split(' ')
-                    assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[2], src=k[1].split(',')[0])
+                    assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[1].split(',')[0], src=k[2].split(',')[0])
 
         assembly_program = "\n".join(HEADER_ASSEMBLY) + starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
         irx86_list.extend(assembly_program)
