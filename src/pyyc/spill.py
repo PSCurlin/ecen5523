@@ -170,7 +170,7 @@ def check_for_spill_code(reg_var_mapping, ir_list):
                 result[i] = ops_str
         elif keywords[0] in ["function_return"]:
             ops_str = ''
-            for j in range(1, range(len(keywords))):
+            for j in range(1, len(keywords)):
                 if is_stack_loc(keywords[1]):
                     is_spill_code_present = True
                     if j == 1:
