@@ -369,7 +369,7 @@ class GRAPH():
             elif keywords[0] in ["function_return", "bez"]:
                 reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, 1, get_var(keywords[1]), ir_list[i], i)
                 for j in range(2, len(keywords)):
-                    reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, j, get_var(keywords[1]), ir_list[i], i)
+                    reg_var_mapping, ir_list[i] = self.update_reg_var(reg_var_mapping, j, get_var(keywords[j]), ir_list[i], i)
         return reg_var_mapping, ir_list
 
 

@@ -196,7 +196,7 @@ class REGISTER_ALLOCATION():
         index = starting_index
         while(index >= 0):
             keywords = self.irx86_list[index].split(' ')
-            if keywords[0] == 'movl' and keywords[2] == stack_loc:
+            if keywords[0] == 'add' and keywords[2] == stack_loc:
                 return index, keywords[1].split(',')[0]
             index -= 1
         return None, stack_loc
@@ -257,7 +257,7 @@ class REGISTER_ALLOCATION():
                     push_str += self.get_inst(keywords[j], 'a' + str(j-2)) + "\n"
                     j -= 1
                     stack_length += 4
-                ir_list[i] = push_str + "call *{op}\nmovl a1, {z}".format(z=keywords[2], op=keywords[1])                    
+                ir_list[i] = push_str + "call *{op}\nadd a0,x0, {z}".format(z=keywords[2], op=keywords[1])                    
             elif op in ['is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', "is_big", "project_big", "inject_big", 
                         "is_true", 'create_list']: 
                 ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
@@ -281,98 +281,7 @@ class REGISTER_ALLOCATION():
             return True
         return False
 
-    def check_for_spill_code(self, reg_var_mapping, ir_list):
-        result = {}
-        is_spill_code_present = False   
-        for i in range(len(ir_list)):
-            line = ir_list[i]
-            if line is None:
-                continue
-            keywords = line.split(" ")
-            if keywords[0] in ["je", "jmp"] or len(keywords) <= 1:
-                continue
-            keywords[1] = keywords[1].split(',')[0]
-            operation = keywords[0]
-            if operation == "movl" and keywords[1] == keywords[2]:
-                reg_var_mapping = self.set_var(reg_var_mapping, reg_var_mapping[i][0]["var"], reg_var_mapping[i][1]["var"]) 
-                result[i] = None
-            elif operation == "cmpl":
-                is_cmpl_spills = False
-                ops = []
-                if self.is_stack_loc(keywords[1]):
-                    is_cmpl_spills = True
-                    src1_op = self.gen_new_temp_var(keywords[1], i)
-                    ops.append("movl " + keywords[1] + ", " + src1_op)
-                else:
-                    src1_op = keywords[1]
-                
-                if self.is_stack_loc(keywords[2]):
-                    is_cmpl_spills = True
-                    src2_op = self.gen_new_temp_var(keywords[2], i)
-                    ops.append("movl " + keywords[2] + ", " + src2_op)
-                else:
-                    src2_op = keywords[2]
-                
-                if is_cmpl_spills: 
-                    is_spill_code_present = True
-                    ops.append(operation + " " + src1_op + ", "+ src2_op)
-                    ops_str = "\n".join(ops)
-                    result[i] = ops_str
-            elif operation in ["equals", "not_equals"]:
-                is_cmpl_spills = False
-                ops = []
-                if self.is_stack_loc(keywords[1]):
-                    is_cmpl_spills = True
-                    src1_op = self.gen_new_temp_var(keywords[1], i)
-                    ops.append("movl " + keywords[1] + ", " + src1_op)
-                else:
-                    src1_op = keywords[1]
-                
-                if self.is_stack_loc(keywords[2]):
-                    is_cmpl_spills = True
-                    src2_op = self.gen_new_temp_var(keywords[2], i)
-                    ops.append("movl " + keywords[2] + ", " + src2_op)
-                else:
-                    src2_op = keywords[2]
-                
-                is_tgt_on_stack = False
-                if self.is_stack_loc(keywords[3]):
-                    is_tgt_on_stack = True
-                    
-                if is_cmpl_spills: 
-                    is_spill_code_present = True
-                    if is_tgt_on_stack:
-                        target_op = self.gen_new_temp_var(keywords[3], i)
-                        ops.append(operation + " " + src1_op + " "+ src2_op + " " + target_op) 
-                        ops.append("movl " + target_op + ", " + keywords[3])               
-                    else:
-                        ops.append(operation + " " + src1_op + " "+ src2_op + " " + keywords[3])
-                    ops_str = "\n".join(ops)
-                    result[i] = ops_str
-                elif is_tgt_on_stack:
-                    is_spill_code_present = True
-                    target_op = self.gen_new_temp_var(keywords[3], i)
-                    ops.append(operation + " " + src1_op + " "+ src2_op + " " + target_op) 
-                    ops.append("movl " + target_op + ", " + keywords[3]) 
-                    ops_str = "\n".join(ops)
-                    result[i] = ops_str                
-            elif operation in ["addl", "movl"] and self.is_stack_loc(keywords[1]) and self.is_stack_loc(keywords[2]):                
-                src_op = self.gen_new_temp_var(keywords[1], i)
-                tgt_op = self.gen_new_temp_var(keywords[2], i)
-                is_spill_code_present = True
-                ops = ["movl " + keywords[1] + ", " + src_op]
-                if operation == "addl":
-                    ops.append("movl " + keywords[2] + ", " + tgt_op)
-                    ops.append("addl " + src_op + ", " + tgt_op)
-                    ops.append("movl " + tgt_op + ", "+ keywords[2])
-                else:
-                    ops.append("movl " + src_op + ", " + keywords[2])
-                ops_str = "\n".join(ops)
-                for m in reg_var_mapping[i]:
-                    ops_str = ops_str.replace(m["reg"], m["var"])  
-                result[i] = ops_str 
-
-        return result, is_spill_code_present            
+    
 
     def remove_none(self, l):
         while(None in l):
@@ -399,7 +308,7 @@ class REGISTER_ALLOCATION():
             if ir_list[i] is  None:
                 continue
             keywords = ir_list[i].split(' ')
-            if 'movl' == keywords[0] and keywords[1].split(',')[0] == keywords[2]:
+            if 'add' == keywords[0] and keywords[1].split(',')[0] == keywords[2]:
                 ir_list[i] = None
             
     def assign_registers(self, flat_tree, stack_var_mapping):
@@ -507,7 +416,7 @@ if __name__ == "__main__":
             for i in range(len(assembly_prog[func])):
                 if 'return' in assembly_prog[func][i]:
                     return_value = assembly_prog[func][i].split(' ')[-1]
-                    assembly_prog[func][i] = "\tmovl {val}, %eax  # return ".format(val= return_value)                
+                    assembly_prog[func][i] = "\nadd {val}, x0, a0  # return ".format(val= return_value)                
 
             end = "\n".join(FUNC_END_OF_ASSEMBLY_FILE)
             end_assembly = end
