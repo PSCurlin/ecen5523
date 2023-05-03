@@ -270,7 +270,8 @@ class REGISTER_ALLOCATION():
                 ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
                 
             elif op in ['set_subscript']:
-                ir_list[i] = FUNCTION_CALL_3_args.format(push_z = self.get_inst(keywords[4], 'a2'), push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
+                ir_list[i] = FUNCTION_CALL_3_args.format(push_z = self.get_inst(keywords[4], 'a2'), push_y = self.get_inst(keywords[3], 'a1'), 
+                                                        push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ['function']:
                 ir_list[i] = None
 
