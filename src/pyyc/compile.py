@@ -405,7 +405,7 @@ if __name__ == "__main__":
         if func == "main":
 
             starter_assembly = "\n".join(MAIN_STARTER_ASSEMBLY)
-            starter_assembly = starter_assembly.format(var_space = str(var_space))
+            starter_assembly = "\n".join(HEADER_ASSEMBLY) + starter_assembly.format(var_space = str(var_space))
             end_assembly = "\n".join(MAIN_END_OF_ASSEMBLY_FILE)
             end_assembly = end_assembly.format(var_space = str(var_space))
         else:
@@ -435,7 +435,13 @@ if __name__ == "__main__":
                     k = assembly_program[i].split(' ')
                     assembly_program[i] = "add {tgt}, x0, {src}".format(tgt = k[1].split(',')[0], src=k[2].split(',')[0])
 
-        assembly_program = "\n".join(HEADER_ASSEMBLY) + starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
+            if 'add' in op:
+                y = assembly_program[i].split(' ')[1]
+                if y.split(',')[0].isdigit():
+                    k = assembly_program[i].split(' ')
+                    assembly_program[i] = "\tli {tgt}, {src}".format(tgt = k[3].split(',')[0], src=k[1].split(',')[0])
+
+        assembly_program =  starter_assembly + "\n" + "\n".join(assembly_program) + "\n" + end_assembly
         irx86_list.extend(assembly_program)
 
     if len(assembly_prog) == 0:

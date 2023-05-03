@@ -22,7 +22,7 @@ FUNC_STARTER_ASSEMBLY = [
     "",
     "\t.align  1",
 	"\t.globl  {func}",
-	"\t.type   main, @function",
+	"\t.type   {func}, @function",
     "{func}:",
     "\taddi    sp,sp,-{var_space}",
 	"\tsd      ra,24(sp)",
