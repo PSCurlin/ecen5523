@@ -238,14 +238,20 @@ class REGISTER_ALLOCATION():
                 ir_list[i] = EQUALS_BIG.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1])
             elif 'not_equals' in ir_list[i]: 
                 if keywords[2].isdigit():
-                    ir_list[i] = "xori {tgt}, {src1}, {src2}\nsnez{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                    ir_list[i] = "xori {tgt}, {src2}, {src1}\nsnez {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
                 else:
-                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nsnez{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nsnez {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif 'equals' in ir_list[i]:
                 if keywords[2].isdigit():
-                    ir_list[i] = "xori {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                    ir_list[i] = "xori {tgt}, {src2}, {src1}\nseqz {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
                 else:
-                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                    ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+
+
+                # if keywords[2].isdigit():
+                #     ir_list[i] = "xori {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
+                # else:
+                #     ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif op in ["get_subscript", "create_closure"]:
                 ir_list[i] = FUNCTION_CALL_2_args.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ["get_fun_ptr", "get_free_vars"]:

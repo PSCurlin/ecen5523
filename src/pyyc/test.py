@@ -1,11 +1,6 @@
-x = 1 + eval(input())
-y = x + x
-z = y + y
-w = z + z
-a = w + w
-b = a + a
-c = b + b
-d = c + c
-e = d + d
-f = x + y + z + w + a + b + c + d + e
-print(c)
+x = 12
+is_positive = 1
+if int(x != 0):
+    is_positive = 0
+
+print(is_positive)
