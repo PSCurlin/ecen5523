@@ -38,11 +38,15 @@ def get_liveness(block, starting_liveness = set()):
         elif keywords[0] in ['beq', 'bne', 'bge', 'ble', 'bgt', 'blt']:
             line_liveness = add_liveness_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])            
-        elif keywords[0] in ["set_subscript", "list_add"]:
+        elif keywords[0] in ["set_subscript"]:
             line_liveness = remove_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])
             line_liveness = add_liveness_var(line_liveness, keywords[3])
             line_liveness = add_liveness_var(line_liveness, keywords[4])
+        elif keywords[0] in ["list_add"]:
+            line_liveness = remove_var(line_liveness, keywords[1])
+            line_liveness = add_liveness_var(line_liveness, keywords[2])
+            line_liveness = add_liveness_var(line_liveness, keywords[3])
         elif keywords[0] in ["create_closure"]:
             #Keywords 2 would be a function pointer
             line_liveness = remove_var(line_liveness, keywords[1])
