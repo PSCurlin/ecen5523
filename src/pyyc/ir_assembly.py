@@ -210,11 +210,11 @@ def gen_ir_assembly(n, stack_var_mapping, func_name):
                 args_list.append(arg.id)
             update_assembly_instruction(func_name, RETURN_FUNCTION_STR.format(args = " ".join(args_list), tgt = stack_var_mapping))
         elif n.func.id in ["get_free_vars"]:
-            update_assembly_instruction(func_name, "get_free_vars " + n.args[0].id + " " + stack_var_mapping)
+            update_assembly_instruction(func_name, "get_free_vars " + stack_var_mapping + " " + n.args[0].id)
         elif n.func.id in ["get_fun_ptr"]:
-            update_assembly_instruction(func_name, "get_fun_ptr " + n.args[0].id + " " + stack_var_mapping)
+            update_assembly_instruction(func_name, "get_fun_ptr " +  stack_var_mapping + " " + n.args[0].id)
         elif n.func.id in ["function_ptr"]:
-            update_assembly_instruction(func_name, "function_ptr " + n.args[0].id + " " + n.args[1].id + " " + stack_var_mapping)
+            update_assembly_instruction(func_name, "function_ptr " + stack_var_mapping + " " + n.args[0].id + " " + n.args[1].id)
         elif n.func.id in ["assign_stack"]:
             update_assembly_instruction(func_name, "assign_stack "  + stack_var_mapping + " " + str(n.args[0].value))
         elif "temp" in n.func.id:

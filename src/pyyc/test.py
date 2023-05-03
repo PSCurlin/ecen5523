@@ -1,4 +1,4 @@
-a = 2
-b = 3
-def sum():
-    return a + b
+def fun():
+    return 42
+
+print(fun())

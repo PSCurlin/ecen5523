@@ -187,9 +187,9 @@ class REGISTER_ALLOCATION():
         print(ir_assembly[0], liveness[0])
         print("####################################")
         
-        # for b in blocks:
-        #     print(b.key, b.code_block, b.liveness)
-        # print("####################################")
+        for b in blocks:
+            print(b.key, b.code_block, b.liveness)
+        print("####################################")
         return liveness
 
     def remove_stack_mov_ops(self, starting_index, stack_loc):
