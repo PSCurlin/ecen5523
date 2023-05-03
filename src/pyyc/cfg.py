@@ -92,14 +92,17 @@ class CFG():
 
         for inst in reversed(ir_assembly):
             keywords = inst.split(" ") 
+            for k in range(len(keywords)):
+                keywords[k] = keywords[k].split(',')[0]
+
             op = keywords[0]  
             node.code_block.append(inst)
-            if op in ['movl', 'addl', 'print', 'eval_input', 'cmpl', 'equals', 'not_equals', 'negl']:
+            if op in ['movl', 'addl', 'print', 'eval_input', 'equals', 'not_equals', 'negl']:
                 pass
             
-            elif op == 'je':
+            elif op == 'beqz':
                 if 'else' in inst or 'end_if' in inst:
-                    connects_to = keywords[1] + ":" 
+                    connects_to = keywords[2] + ":" 
                     if connects_to not in self.meta_data_dict:
                         if node.key not in self.if_fixes:
                             self.if_fixes[node.key] = [connects_to]
@@ -109,7 +112,7 @@ class CFG():
                         node.links.append(self.meta_data_dict[connects_to])
 
                 elif 'while' in inst:
-                    connects_to = keywords[1] + ":" 
+                    connects_to = keywords[2] + ":" 
                     if connects_to not in self.meta_data_dict:
                         if node.key not in self.fixes:
                             self.fixes[node.key] = [connects_to]
@@ -118,7 +121,7 @@ class CFG():
                     else:
                         node.links.append(self.meta_data_dict[connects_to])
 
-            elif op in 'jmp':
+            elif op in ['j']:
                 if 'end_if' in inst:
                     connects_to = keywords[1] + ":"
                     if connects_to not in self.meta_data_dict:
@@ -174,9 +177,6 @@ class CFG():
             elif "else" in op:
                 node.block_type = inst
                 node.code_block.reverse()
-                # import ipdb; ipdb.set_trace()
-                # s= 9
-                # end_if_key = self.meta_data_dict["end_if" + inst.replace("else", "")]
                 self.meta_data_dict[inst] = node.key
                 self.cfg.append(node)
                 node = self.get_new_node()
@@ -200,11 +200,9 @@ class CFG():
         
         for node_id in self.if_fixes:
             for label in self.if_fixes[node_id]:
-                try:
-                    index = self.meta_data_dict[label]
-                except:
-                    import ipdb; ipdb.set_trace()
-                    s= 9
+
+                index = self.meta_data_dict[label]
+
                 self.cfg[node_id].links.append(index)
 
         for bb in reversed(self.cfg):

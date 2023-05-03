@@ -595,8 +595,9 @@ def handle_boolop_node(n, indent, target_var, func_name):
     if op == "and":
         for i in range(len(op_values)-1):
             is_left_var_int = get_new_box_is_int()
-            is_left_var_big = get_new_box_is_int()
             is_left_var_bool = get_new_box_is_int()
+            is_left_var_big = get_new_box_is_int()
+            
 
             to_cmp = get_new_box_proj()
             add_flat_python(indent_level, is_left_var_int + " = is_int(" + op_values[i] + ")", func_name)

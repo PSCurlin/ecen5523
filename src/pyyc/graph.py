@@ -357,6 +357,7 @@ class GRAPH():
 
     def get_reg_var_mapping(self, ir_assembly, liveness_list):
         self.gen_graph(ir_assembly, liveness_list)
+        # import ipdb; ipdb.set_trace()
         stack_mapping = self.coloring_graph()
         vars = list(self.graph.keys())
         vars.sort()
