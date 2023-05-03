@@ -97,10 +97,10 @@ class CFG():
 
             op = keywords[0]  
             node.code_block.append(inst)
-            if op in ['movl', 'addl', 'print', 'eval_input', 'equals', 'not_equals', 'negl']:
-                pass
+            # if op in ['movl', 'addl', 'print', 'eval_input', 'equals', 'not_equals', 'negl']:
+            #     pass
             
-            elif op == 'beqz':
+            if op == 'beqz':
                 if 'else' in inst or 'end_if' in inst:
                     connects_to = keywords[2] + ":" 
                     if connects_to not in self.meta_data_dict:
@@ -200,9 +200,7 @@ class CFG():
         
         for node_id in self.if_fixes:
             for label in self.if_fixes[node_id]:
-
                 index = self.meta_data_dict[label]
-
                 self.cfg[node_id].links.append(index)
 
         for bb in reversed(self.cfg):

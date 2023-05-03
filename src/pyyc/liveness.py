@@ -23,7 +23,7 @@ def get_liveness(block, starting_liveness = set()):
         if keywords[0] in ['li', 'return', 'eval_input', 'create_dict']:
             line_liveness = remove_var(line_liveness, keywords[1])
         elif keywords[0] in ['neg', 'mv', 'addi','is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', 'is_big', 'project_big',
-                             'inject_big', 'is_true', 'create_list', 'assign_stack', 'xori','snez', 'seqz', "get_fun_ptr", "get_free_vars", "ld"]:
+                             'inject_big', 'is_true', 'create_list', 'xori','snez', 'seqz', "get_fun_ptr", "get_free_vars", "ld", "assign_stack"]:
             line_liveness = remove_var(line_liveness, keywords[1])
             line_liveness = add_liveness_var(line_liveness, keywords[2])
         elif keywords[0] in ['sd']:

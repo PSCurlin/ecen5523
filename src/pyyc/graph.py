@@ -224,9 +224,28 @@ class GRAPH():
                     if not src_op.isdigit():
                         self.add_neighbors(live_var, src_op)
 
+            elif op in ["assign_stack"]:
+                target_node = self.get_node(target_var)
+                target_node.dont_assign = target_node.dont_assign.union(self.compare_register_clash)
+                src_op1 = get_var(keywords[1])
+
+                if not src_op1.isdigit():
+                    self.add_neighbors(target_var, src_op1)
+                    src_op1_node = self.get_node(src_op1)
+                    src_op1_node.dont_assign = src_op1_node.dont_assign.union(self.compare_register_clash)
                 
-                    
-            elif op in ["equals", "not_equals", "equals_big", "not_equals_big", "get_subscript", "add", "assign_stack"]:
+                for live_var in live_vars:
+                    if live_var == target_var: 
+                        continue
+                    self.add_neighbors(target_var, live_var)
+                    live_var_node = self.get_node(live_var)
+                    live_var_node.dont_assign = live_var_node.dont_assign.union(self.compare_register_clash)
+                    if not src_op1.isdigit():
+                        src_op1_node = self.get_node(src_op1)
+                        self.add_neighbors(src_op1, live_var)
+    
+                
+            elif op in ["equals", "not_equals", "equals_big", "not_equals_big", "get_subscript", "add"]:
                 # compare saved registers will interfere with live_vars
                 target_node = self.get_node(target_var)
                 target_node.dont_assign = target_node.dont_assign.union(self.compare_register_clash)
@@ -357,7 +376,6 @@ class GRAPH():
 
     def get_reg_var_mapping(self, ir_assembly, liveness_list):
         self.gen_graph(ir_assembly, liveness_list)
-        # import ipdb; ipdb.set_trace()
         stack_mapping = self.coloring_graph()
         vars = list(self.graph.keys())
         vars.sort()

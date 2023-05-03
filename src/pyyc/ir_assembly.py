@@ -216,7 +216,7 @@ def gen_ir_assembly(n, stack_var_mapping, func_name):
         elif n.func.id in ["function_ptr"]:
             update_assembly_instruction(func_name, "function_ptr " + n.args[0].id + " " + n.args[1].id + " " + stack_var_mapping)
         elif n.func.id in ["assign_stack"]:
-            update_assembly_instruction(func_name, "assign_stack $" + str(n.args[0].value) + " " + stack_var_mapping)
+            update_assembly_instruction(func_name, "assign_stack "  + stack_var_mapping + " " + str(n.args[0].value))
         elif "temp" in n.func.id:
             update_assembly_instruction(func_name, "call " + n.func.id + " " + n.args[0].id) 
         else:

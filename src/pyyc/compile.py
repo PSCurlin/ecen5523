@@ -230,8 +230,7 @@ class REGISTER_ALLOCATION():
                 value = keywords[1]
                 ir_list[i] = CREATE_DICT.format(value = value, op=op)
             elif op in ["assign_stack"]:
-                value =  keywords[2].replace('$', '') + "(%ebp)"
-                ir_list[i] = ASSIGN_STACK.format(value = value, var = keywords[1])
+                ir_list[i] = ASSIGN_STACK.format(value = keywords[2], var = keywords[1])
             elif 'not_equals_big' in ir_list[i]:  
                 ir_list[i] = NOT_EQUALS_BIG.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1])
             elif 'equals_big' in ir_list[i]:
@@ -246,12 +245,6 @@ class REGISTER_ALLOCATION():
                     ir_list[i] = "xori {tgt}, {src2}, {src1}\nseqz {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
                 else:
                     ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz {tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
-
-
-                # if keywords[2].isdigit():
-                #     ir_list[i] = "xori {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
-                # else:
-                #     ir_list[i] = "xor {tgt}, {src1}, {src2}\nseqz{tgt}, {tgt}".format(tgt=keywords[1], src1=keywords[2], src2=keywords[3])
             elif op in ["get_subscript", "create_closure"]:
                 ir_list[i] = FUNCTION_CALL_2_args.format(push_y = self.get_inst(keywords[3], 'a1'), push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
             elif op in ["get_fun_ptr", "get_free_vars"]:
