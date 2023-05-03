@@ -55,13 +55,14 @@ class GRAPH():
 
             target_var = get_var(keywords[1])
             if op in ["li"]:
+                src_op = get_var(keywords[1])
                 for live_var in live_vars:
                     if live_var == target_var or live_var == src_op:
                         continue
                     self.add_neighbors(live_var, target_var)
             elif op in ["ld"]:
                 target_node = self.get_node(target_var)
-                
+                src_op = get_var(keywords[1])
                 if not src_op.isdigit():
                     self.add_neighbors(src_op, target_var)
                 for live_var in live_vars:
