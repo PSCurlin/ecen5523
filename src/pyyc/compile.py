@@ -187,8 +187,8 @@ class REGISTER_ALLOCATION():
         print(ir_assembly[0], liveness[0])
         print("####################################")
         
-        for b in blocks:
-            print(b.key, b.code_block, b.liveness)
+        # for b in blocks:
+        #     print(b.key, b.code_block)
         print("####################################")
         return liveness
 
@@ -257,7 +257,7 @@ class REGISTER_ALLOCATION():
                     push_str += self.get_inst(keywords[j], 'a' + str(j-2)) + "\n"
                     j -= 1
                     stack_length += 4
-                ir_list[i] = push_str + "call *{op}\nadd a0,x0, {z}".format(z=keywords[2], op=keywords[1])                    
+                ir_list[i] = push_str + "call {op}\nadd a0,x0, {z}".format(z=keywords[2], op=keywords[1])                    
             elif op in ['is_int', 'project_int', 'inject_int', 'is_bool', 'project_bool', 'inject_bool', "is_big", "project_big", "inject_big", 
                         "is_true", 'create_list']: 
                 ir_list[i] = FUNCTION_CALL_1_args.format(push_x = self.get_inst(keywords[2], 'a0'),z=keywords[1],  op=op)
@@ -348,9 +348,7 @@ class REGISTER_ALLOCATION():
             self.fix_function_calls(ir_list)
             self.remove_none(ir_list)
             
-            ir_lists[fun] = "\n".join(ir_list).split("\n")
-            # ir_list = "\n".join(ir_list).split("\n")
-            
+            ir_lists[fun] = "\n".join(ir_list).split("\n")            
             stack_per_fun[fun] = stack_mapping
         return ir_lists, stack_per_fun
 
@@ -423,7 +421,6 @@ if __name__ == "__main__":
 
         assembly_program = assembly_prog[func]
 
-        # import ipdb; ipdb.set_trace()
         for i in range(len(assembly_program)):
             op = assembly_program[i].split(' ')[0]
             if op == '\tsd':

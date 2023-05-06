@@ -97,8 +97,6 @@ class CFG():
 
             op = keywords[0]  
             node.code_block.append(inst)
-            # if op in ['movl', 'addl', 'print', 'eval_input', 'equals', 'not_equals', 'negl']:
-            #     pass
             
             if op == 'beqz':
                 if 'else' in inst or 'end_if' in inst:
